@@ -666,29 +666,21 @@ def josnRegister():
  
  
  
- 
-@app.route("/login", methods=['GET', 'POST'])
+@app.route("/login", methods=['POST'])
 def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
-        if user and bcrypt.check_password_hash(user.password, form.password.data):
-            login_user(user, remember=form.remember.data)
-            next_page = request.args.get('next')
-            return json.dumps( {
+    form = request.get_json()
+    user = User.query.filter_by(email=form['email']).first()
+    decoded = bcrypt.check_password_hash(user.password, form['password'])
+    if user and bcrypt.check_password_hash(user.password, form['password']):
+        return json.dumps( {
             "message": 'Login successful!',
             "statusCode": 200
-             })
-            # flash('Login successful.', 'success')
-            # return redirect(next_page) if next_page else redirect(url_for('dashboard'))
-        else:
-            return json.dumps( {
+        })
+    else:
+        return json.dumps( {
             "message": 'Login Unsuccessful. Please check email and password',
             "statusCode": 401
             })            
-    return render_template('login.html', title='Login', form=form)
 
 @app.route("/logout")
 def logout():
