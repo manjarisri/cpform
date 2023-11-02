@@ -78,6 +78,14 @@ class RegistrationForm(FlaskForm):
         user = User.query.filter_by(email=email.data).first()
         if user:
             raise ValidationError('email already exist. Please choose a different one.')
+
+def RegistrationJSONForm(data):
+    #print(data['username'])
+    user = User.query.filter_by(username=data['username']).first()
+    email = User.query.filter_by(username=data['email']).first()
+    if user or email:
+        return 0
+    return 1
    
 class LoginForm(FlaskForm):
     email = StringField('Email',
@@ -635,14 +643,19 @@ def josnRegister():
     if current_user.is_authenticated:
         return redirect(url_for('home'))
     form = request.get_json()
-    hashed_password = bcrypt.generate_password_hash(form['password']).decode('utf-8')
-    user = User(username=form['username'], email=form['email'], password=hashed_password)
-    db.session.add(user)
-    db.session.commit()
-    return json.dumps( {
-            "message": 'Your account has been created! You are now able to log in ',
-            "statusCode": 200
-        }), 200
+    if RegistrationJSONForm(form):
+        hashed_password = bcrypt.generate_password_hash(form['password']).decode('utf-8')
+        user = User(username=form['username'], email=form['email'], password=hashed_password)
+        db.session.add(user)
+        db.session.commit()
+        return json.dumps( {
+                "message": 'Your account has been created! You are now able to log in ',
+                "statusCode": 200
+            }), 200
+    return json.dumps({
+	   "message": 'duplicate username or email',
+	   "statusCode": 401
+	}), 401
    #     flash('Your account has been created! You are now able to log in', 'success')
     #    return redirect(url_for('login'))
     #return render_template('register.html', title='Register', form=form)
