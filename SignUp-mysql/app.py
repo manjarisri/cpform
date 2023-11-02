@@ -12,7 +12,7 @@ from flask import Flask, request, render_template
 from azure.identity import ClientSecretCredential
 from azure.keyvault.secrets import SecretClient
 from azure.mgmt.keyvault import KeyVaultManagementClient
- 
+import json 
 import os
 import subprocess
 import random
@@ -23,7 +23,7 @@ app = Flask(__name__, static_url_path='/static')
 app.config['SECRET_KEY'] = '5791628bb0b13ce0c676dfde280ba245'
  
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///quelin.db'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://manjari:manjari@localhost/creds'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://admin:cockpitpro@cockpit-pro.cdcxjmndyjyl.ap-southeast-2.rds.amazonaws.com:3306/cockpit'
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
@@ -210,8 +210,11 @@ def submit_form_aws():
     with open(secrets_file_path, "w"):         pass
  
     ## ending the script
- 
-    return render_template('./create_aws.html')
+    return json.dumps( {
+            "message": 'Credential Succesfully added',
+            "statusCode": 200
+    }) 
+    #return render_template('./create_aws.html')
  
 @app.route('/aws_form', methods=['GET'])
 def aws_form():
@@ -373,8 +376,12 @@ def submit_form_azure():
         with open(secrets_file_path, "w"):         pass
     
     ## ending the script
-    flash('Credential Succesfully added.', 'success')
-    return render_template('create_aks.html')
+    return json.dumps( {
+            "message": 'Credential Succesfully added',
+            "statusCode": 200
+    })
+   # flash('Credential Succesfully added.', 'success')
+   # return render_template('create_aks.html')
  
  
 @app.route('/azure_form', methods=['GET'])
@@ -467,7 +474,7 @@ def submit_form_gcp():
     # Azure Key Vault and Secrets Configuration
     key_vault_name = User_name + User_Id
  
-    resource_group_name = "prashant-rg"
+    resource_group_name = "rupali-rg"
     location = "westus2"
     secrets_file_path = json_file.filename
         
@@ -519,8 +526,11 @@ def submit_form_gcp():
     os.remove(secrets_file_path)    
  
     
- 
-    return render_template('create_gke.html')
+    return json.dumps( {
+            "message": 'Credential Succesfully added',
+            "statusCode": 200
+    })
+   # return render_template('create_gke.html')
     
 #gcp
 @app.route('/gcp_form', methods=['GET'])
@@ -587,7 +597,11 @@ def about():
     return render_template('about.html', title='About')
  
  
-@app.route("/register", methods=['GET', 'POST'])
+@app.route("/register")
+def notregister():
+    form = RegistrationForm()
+    return render_template('register.html', title='Register', form=form)
+@app.route("/register", methods=['POST'])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('home'))
@@ -598,10 +612,17 @@ def register():
         user = User(username=form.username.data, email=form.email.data, password=hashed_password)
         db.session.add(user)
         db.session.commit()
-        flash('Your account has been created! You are now able to log in', 'success')
-        return redirect(url_for('login'))
-    
-    return render_template('register.html', title='Register', form=form)
+        return json.dumps( {
+            "message": 'Your account has been created! You are now able to log in ',
+            "statusCode": 200
+        })
+   #     flash('Your account has been created! You are now able to log in', 'success')
+    #    return redirect(url_for('login'))
+    #return render_template('register.html', title='Register', form=form)
+    return json.dumps({
+	   "message": 'Invalid or not mathced with defined expression',
+	   "statusCode": 401
+	})
  
  
 @app.route("/login", methods=['GET', 'POST'])
@@ -614,12 +635,19 @@ def login():
         if user and bcrypt.check_password_hash(user.password, form.password.data):
             login_user(user, remember=form.remember.data)
             next_page = request.args.get('next')
-            flash('Login successful.', 'success')
-            return redirect(next_page) if next_page else redirect(url_for('dashboard'))
+            return json.dumps( {
+            "message": 'Login successful!',
+            "statusCode": 200
+             })
+            # flash('Login successful.', 'success')
+            # return redirect(next_page) if next_page else redirect(url_for('dashboard'))
         else:
-            flash('Login Unsuccessful. Please check email and password', 'danger')
+            return json.dumps( {
+            "message": 'Login Unsuccessful. Please check email and password',
+            "statusCode": 401
+            })            
     return render_template('login.html', title='Login', form=form)
- 
+
 @app.route("/logout")
 def logout():
     logout_user()
