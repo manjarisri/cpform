@@ -12,6 +12,7 @@ from flask import Flask, request, render_template
 from azure.identity import ClientSecretCredential
 from azure.keyvault.secrets import SecretClient
 from azure.mgmt.keyvault import KeyVaultManagementClient
+from flask_cors import CORS
 import json 
 import os
 import subprocess
@@ -19,9 +20,14 @@ import random
 import base64
  
 app = Flask(__name__, static_url_path='/static')
- 
+
+CORS(app) 
+
 app.config['SECRET_KEY'] = '5791628bb0b13ce0c676dfde280ba245'
  
+
+app.config['WTF_CSRF_ENABLED'] = False
+
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///quelin.db'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://admin:cockpitpro@cockpit-pro.cdcxjmndyjyl.ap-southeast-2.rds.amazonaws.com:3306/cockpit'
 db = SQLAlchemy(app)
@@ -615,14 +621,37 @@ def register():
         return json.dumps( {
             "message": 'Your account has been created! You are now able to log in ',
             "statusCode": 200
-        })
+        }), 200
    #     flash('Your account has been created! You are now able to log in', 'success')
     #    return redirect(url_for('login'))
     #return render_template('register.html', title='Register', form=form)
     return json.dumps({
 	   "message": 'Invalid or not mathced with defined expression',
 	   "statusCode": 401
-	})
+	}), 401
+
+@app.route("/jsonRegister", methods=['POST'])
+def josnRegister():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    form = request.get_json()
+    hashed_password = bcrypt.generate_password_hash(form['password']).decode('utf-8')
+    user = User(username=form['username'], email=form['email'], password=hashed_password)
+    db.session.add(user)
+    db.session.commit()
+    return json.dumps( {
+            "message": 'Your account has been created! You are now able to log in ',
+            "statusCode": 200
+        }), 200
+   #     flash('Your account has been created! You are now able to log in', 'success')
+    #    return redirect(url_for('login'))
+    #return render_template('register.html', title='Register', form=form)
+    #return json.dumps({
+     #      "message": 'Invalid or not mathced with defined expression',
+      #     "statusCode": 401
+       # }), 401
+ 
+ 
  
  
 @app.route("/login", methods=['GET', 'POST'])
