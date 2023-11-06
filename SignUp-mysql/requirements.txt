@@ -27,3 +27,5 @@ azure.keyvault
 azure-mgmt-keyvault
 
 flask-cors
+
+python-gitlab
