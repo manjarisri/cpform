@@ -1,29 +1,34 @@
-from flask import Flask, render_template, url_for, flash, redirect,request
+from flask import Flask, render_template, url_for, flash, redirect, request
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
-from flask_login import LoginManager,UserMixin,login_user, current_user, logout_user, login_required
+from flask_login import LoginManager, UserMixin, login_user, current_user, logout_user, login_required
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, BooleanField
-from wtforms.validators import DataRequired, Length, Email, EqualTo,ValidationError
-from flask import Flask, request, render_template, redirect, url_for
+from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError
 from decouple import config
-from flask import Flask, request, render_template
-from azure.identity import ClientSecretCredential
-from azure.keyvault.secrets import SecretClient
-from azure.mgmt.keyvault import KeyVaultManagementClient
- 
 import os
 import subprocess
 import random
 import base64
- 
+from upload_tf_file import upload_file_to_gitlab
+import json
+from azure.identity import ClientSecretCredential
+from azure.keyvault.secrets import SecretClient
+from azure.mgmt.keyvault import KeyVaultManagementClient
+
+
+gitlab_url = "https://gitlab.com"
+project_id = "51066584"
+access_token = "glpat-G3RiTBsw4oQopnHQi9-x"
+branch_name = "main"
+
 app = Flask(__name__, static_url_path='/static')
  
 app.config['SECRET_KEY'] = '5791628bb0b13ce0c676dfde280ba245'
  
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///quelin.db'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://manjari:manjari@localhost/creds'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///quelin.db[17:12] Manjari Srivastav
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://admin:cockpitpro@cockpit-pro.cdcxjmndyjyl.ap-southeast-2.rds.amazonaws.com:3306/cockpit'
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
@@ -284,7 +289,19 @@ def submit_form_azure():
     resource_group_name = "rupali-rg"  
     key_vault_name = User_name + User_Id
     secrets_file_path = "./terraform.tfvars"
- 
+
+
+    user_detail = {
+        "user": User_name
+    }
+
+    print("User name:", User_name)
+
+    file_name = "user_name.json"
+
+    with open(file_name, 'w') as file:
+        json.dump(user_detail, file)
+
  
    # Replace underscores with hyphens in the Key Vault and Resource Group names
     key_vault_name = key_vault_name.replace("_", "-")
@@ -399,38 +416,85 @@ def create_aks():
     aks_version = request.form.get('aks_version')
     node_count = request.form.get('node_count')
     cluster_type = request.form.get('cluster_type')
+
+
+    file_name = "./user_name.json"
+
+    with open(file_name, 'r') as file:
+        user_data = json.load(file)
+
+    print("user name is:", user_data["user"])
+
+    file_name = f'terraform-{user_data["user"]}.tfvars'
     
     aks_version = float(aks_version)
     
     # Initialize variables for vm_name and vm_pass
     vm_name = None
     vm_pass = None
- 
+
     # Process form data based on Cluster Type
     if cluster_type == 'Private':
         vm_name = request.form.get('vm_name')
         vm_pass = request.form.get('vm_pass')
- 
+
     # Convert availability_zones to a string containing an array
     availability_zones_str = '[' + ', '.join(['"' + zone + '"' for zone in availability_zones]) + ']'
- 
-    # Create the content for terraform.tfvars
-    with open('terraform.tfvars', 'w') as f:
+
+    with open(file_name, 'w') as f:
         f.write(f'resource_group = "{resource_group}"\n')
         f.write(f'Region = "{Region}"\n')
         f.write(f'availability_zones = {availability_zones_str}\n')
-        f.write(f'aks_name = "{aks_name}"\n')
+        f.write(f'aks_name = "{aks_name}"\n') 
         f.write(f'aks_version = "{aks_version}"\n')
         f.write(f'node_count = "{node_count}"\n')
         f.write(f'cluster_type = "{cluster_type}"\n')
         if vm_name is not None:
             f.write(f'vm_name = "{vm_name}"\n')
             f.write(f'vm_pass = "{vm_pass}"\n')
- 
-    # You can also redirect the user to a success page if needed
-    return render_template('success.html')
- 
- 
+
+    file_path = f'templates/user-data/{file_name}'
+
+    if vm_name is not None:
+        # Include vm_name and vm_pass if vm_name is not None
+        tf_config = f'''
+rg_name = "{resource_group}"
+region = "{Region}"
+availability_zones = "{availability_zones}"
+aks_name = "{aks_name}"
+aks_version = "{aks_version}"
+node_count = "{node_count}"
+vm_name = "{vm_name}"
+vm_pass = "{vm_pass}"'''
+    else:
+        tf_config = f'''
+rg_name = "{resource_group}"
+region = "{Region}"
+availability_zones = "{availability_zones}"
+aks_name = "{aks_name}"
+aks_version = "{aks_version}"
+node_count = "{node_count}"'''
+   
+    print("Configuration:", tf_config)
+
+    
+    print("Uploading tf file to gitlab")
+    upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
+    print("Tf File uploaded successfully")
+
+    os.remove("terraform.tfvars")
+    os.remove("user_name.json")
+    return json.dumps( {
+            "message": 'pipeline is triggered! You are now able to log in ',
+            "statusCode": 200
+        })
+
+    # return render_template('success.html')
+
+
+
+
+
 @app.route('/gcp')
 def gcp():
     return render_template('gcp.html')
