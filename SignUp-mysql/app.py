@@ -753,7 +753,7 @@ def login():
  
  
 @app.route("/JsonLogin", methods=['POST'])
-def login():
+def JsonLogin():
     form = request.get_json()
     user = User.query.filter_by(email=form['email']).first()
     decoded = bcrypt.check_password_hash(user.password, form['password'])
