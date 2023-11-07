@@ -672,12 +672,12 @@ def json_create_aks():
                 user_data = json.load(file)
         else:
             return json.dumps({
-                "message": "File does not exist"
-            }), 404  # Use 404 to indicate "Not Found" if the file is not found
+                "message": "Failed to trigger pipeline user already trigged the pipeline"
+            }), 409  # Use 404 to indicate "Not Found" if the file is not found
     except FileNotFoundError:
         return json.dumps({
-            "message": "File not found"
-        }), 404
+            "message": "Failed to trigger pipeline user already trigged the pipeline"
+        }), 409
     except IOError as e:
         return json.dumps({
         "message": f"Failed to read the file: {str(e)}"
