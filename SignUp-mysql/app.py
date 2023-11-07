@@ -900,7 +900,7 @@ def JsonLogin():
         return json.dumps( {
             "message": 'Login Unsuccessful. Please check email and password',
             "statusCode": 401
-            })            
+            }), 401           
 
 @app.route("/logout")
 def logout():
