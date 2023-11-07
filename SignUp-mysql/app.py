@@ -514,7 +514,7 @@ def json_submit_form_azure():
             print(f"Azure Key Vault '{key_vault_name}' already exists or encountered an error during creation in Resource Group '{resource_group_name}'.")
             return json.dumps({
                 "message" : "Azure Key Vault '{}' already exists or encountered an error during creation in Resource Group '{}'".format(key_vault_name, resource_group_name)
-            }),401
+            }),409
  
         
         # Store secrets in Azure Key Vault
@@ -649,6 +649,96 @@ node_count = "{node_count}"'''
         })
 
     # return render_template('success.html')
+
+
+ 
+@app.route('/json_create_aks', methods=['POST'])
+def json_create_aks():
+    # Retrieve form data
+    form = request.get_json()
+    resource_group = form['resource_group']
+    Region = form['Region']
+    availability_zones = form['availability_zones[]']  # Use getlist to get multiple selected values
+    aks_name = form['aks_name']
+    aks_version = form['aks_version']
+    node_count = form['node_count']
+    cluster_type = form['cluster_type']
+
+
+    file_name = "./user_name.json"
+
+    with open(file_name, 'r') as file:
+        user_data = json.load(file)
+
+    print("user name is:", user_data["user"])
+
+    file_name = f'terraform-{user_data["user"]}.tfvars'
+    
+    aks_version = float(aks_version)
+    
+    # Initialize variables for vm_name and vm_pass
+    vm_name = None
+    vm_pass = None
+
+    # Process form data based on Cluster Type
+    if cluster_type == 'Private':
+        vm_name = request.form.get('vm_name')
+        vm_pass = request.form.get('vm_pass')
+
+    # Convert availability_zones to a string containing an array
+    availability_zones_str = '[' + ', '.join(['"' + zone + '"' for zone in availability_zones]) + ']'
+
+    with open(file_name, 'w') as f:
+        f.write(f'resource_group = "{resource_group}"\n')
+        f.write(f'Region = "{Region}"\n')
+        f.write(f'availability_zones = {availability_zones_str}\n')
+        f.write(f'aks_name = "{aks_name}"\n') 
+        f.write(f'aks_version = "{aks_version}"\n')
+        f.write(f'node_count = "{node_count}"\n')
+        f.write(f'cluster_type = "{cluster_type}"\n')
+        if vm_name is not None:
+            f.write(f'vm_name = "{vm_name}"\n')
+            f.write(f'vm_pass = "{vm_pass}"\n')
+
+    file_path = f'templates/user-data/{file_name}'
+
+    if vm_name is not None:
+        # Include vm_name and vm_pass if vm_name is not None
+        tf_config = f'''
+rg_name = "{resource_group}"
+region = "{Region}"
+availability_zones = "{availability_zones}"
+aks_name = "{aks_name}"
+aks_version = "{aks_version}"
+node_count = "{node_count}"
+vm_name = "{vm_name}"
+vm_pass = "{vm_pass}"'''
+    else:
+        tf_config = f'''
+rg_name = "{resource_group}"
+region = "{Region}"
+availability_zones = "{availability_zones}"
+aks_name = "{aks_name}"
+aks_version = "{aks_version}"
+node_count = "{node_count}"'''
+   
+    print("Configuration:", tf_config)
+
+    
+    print("Uploading tf file to gitlab")
+    upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
+    print("Tf File uploaded successfully")
+
+
+    os.remove(file_name)
+    os.remove("user_name.json")
+    return json.dumps( {
+            "message": 'pipeline is triggered! You are now able to log in ',
+            "statusCode": 200
+        })
+
+
+
 
 
 
