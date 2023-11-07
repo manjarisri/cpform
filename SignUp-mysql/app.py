@@ -663,7 +663,8 @@ def json_create_aks():
     aks_version = form['aks_version']
     node_count = form['node_count']
     cluster_type = form['cluster_type']
-
+    
+    file_name = "./user_name.json"
 
     try:
         if os.path.exists(file_name):
