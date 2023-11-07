@@ -867,9 +867,8 @@ def success_gke():
 @app.route('/create_gke', methods=['POST'])
 def create_gke():
     # Retrieve form data
-    resource_group = request.form.get('resource_group')
+    project = request.form.get('project')
     Region = request.form.get('Region')
-    availability_zone = request.form.get('availability_zone')
     gke_name = request.form.get('gke_name')
     gke_version = request.form.get('gke_version')
     node_count = request.form.get('node_count')
@@ -889,9 +888,8 @@ def create_gke():
  
     # Create the content for terraform.tfvars
     with open('terraform.tfvars', 'w') as f:
-        f.write(f'resource_group = "{resource_group}"\n')
+        f.write(f'project = "{project}"\n')
         f.write(f'Region = "{Region}"\n')
-        f.write(f'availability_zone = "{availability_zone}"\n')
         f.write(f'gke_name = "{gke_name}"\n')
         f.write(f'gke_version = "{gke_version}"\n')
         f.write(f'node_count = "{node_count}"\n')
