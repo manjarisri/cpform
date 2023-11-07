@@ -506,7 +506,8 @@ node_count = "{node_count}"'''
     upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
     print("Tf File uploaded successfully")
 
-    os.remove("terraform.tfvars")
+
+    os.remove(file_name)
     os.remove("user_name.json")
     return json.dumps( {
             "message": 'pipeline is triggered! You are now able to log in ',
