@@ -513,7 +513,7 @@ def json_submit_form_azure():
         except subprocess.CalledProcessError:
             print(f"Azure Key Vault '{key_vault_name}' already exists or encountered an error during creation in Resource Group '{resource_group_name}'.")
             return json.dumps({
-                "message" : "Azure Key Vault '{key_vault_name}' already exists or encountered an error during creation in Resource Group '{resource_group_name}",
+                "message" : "Azure Key Vault '{}' already exists or encountered an error during creation in Resource Group '{}'".format(key_vault_name, resource_group_name)
             }),401
  
         
