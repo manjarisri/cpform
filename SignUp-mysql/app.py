@@ -154,7 +154,7 @@ def submit_form_aws():
  
     # Azure Resource Group and Key Vault Configuration
     resource_group_name = "prashant-rg"  
-    key_vault_name = User_name + User_Id
+    key_vault_name = User_name
     secrets_file_path = "./terraform.tfvars"
  
     
@@ -304,7 +304,7 @@ def submit_form_azure():
  
     # Azure Resource Group and Key Vault Configuration
     resource_group_name = "rupali-rg"  
-    key_vault_name = User_name + User_Id
+    key_vault_name = User_name
     secrets_file_path = "./terraform.tfvars"
 
 
@@ -434,7 +434,7 @@ def json_submit_form_azure():
  
     # Azure Resource Group and Key Vault Configuration
     resource_group_name = "rupali-rg"  
-    key_vault_name = User_name + User_Id
+    key_vault_name = User_name
     secrets_file_path = "./terraform.tfvars"
 
 
