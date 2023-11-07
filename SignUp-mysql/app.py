@@ -984,12 +984,19 @@ def login():
 def JsonLogin():
     form = request.get_json()
     user = User.query.filter_by(email=form['email']).first()
-    decoded = bcrypt.check_password_hash(user.password, form['password'])
-    if user and bcrypt.check_password_hash(user.password, form['password']):
-        return json.dumps( {
-            "message": 'Login successful!',
-            "statusCode": 200
-        })
+    if user:
+        decoded = bcrypt.check_password_hash(user.password, form['password'])
+        print(decoded)
+        if user and decoded:
+            return json.dumps( {
+                "message": 'Login successful!',
+                "statusCode": 200
+            })
+        else: 
+            return json.dumps( {
+            "message": 'Login Unsuccessful. Please check email and password',
+            "statusCode": 401
+            }), 401
     else:
         return json.dumps( {
             "message": 'Login Unsuccessful. Please check email and password',
