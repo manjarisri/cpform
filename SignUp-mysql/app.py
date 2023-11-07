@@ -414,7 +414,7 @@ def submit_form_azure():
    # flash('Credential Succesfully added.', 'success')
 
 @app.route('/create_aks',methods=['GET'])
-def get_create_aks
+def get_create_aks():
     return render_template('create_aks.html')
  
  
