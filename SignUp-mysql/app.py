@@ -412,7 +412,10 @@ def submit_form_azure():
             "statusCode": 200
     })
    # flash('Credential Succesfully added.', 'success')
-   # return render_template('create_aks.html')
+
+@app.route('/create_aks',methods=['GET'])
+def get_create_aks
+    return render_template('create_aks.html')
  
  
 @app.route('/azure_form', methods=['GET'])
