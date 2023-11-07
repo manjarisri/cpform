@@ -665,16 +665,22 @@ def json_create_aks():
     cluster_type = form['cluster_type']
 
 
-    file_name = "./user_name.json"
     try:
         if os.path.exists(file_name):
             with open(file_name, 'r') as file:
                 user_data = json.load(file)
-    except subprocess.CalledProcessError:
+        else:
+            return json.dumps({
+                "message": "File does not exist"
+            }), 404  # Use 404 to indicate "Not Found" if the file is not found
+    except FileNotFoundError:
         return json.dumps({
-            "message": "failed to trigger"
-        }),409
-
+            "message": "File not found"
+        }), 404
+    except IOError as e:
+        return json.dumps({
+        "message": f"Failed to read the file: {str(e)}"
+        }), 500 
 
     print("user name is:", user_data["user"])
 
