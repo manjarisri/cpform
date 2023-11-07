@@ -658,7 +658,7 @@ def json_create_aks():
     form = request.get_json()
     resource_group = form['resource_group']
     Region = form['Region']
-    availability_zones = form.get['availability_zones', []]  # Use getlist to get multiple selected values
+    availability_zones = form.get('availability_zones', [])  # Use getlist to get multiple selected values
     aks_name = form['aks_name']
     aks_version = form['aks_version']
     node_count = form['node_count']
