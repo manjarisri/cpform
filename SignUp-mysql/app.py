@@ -415,11 +415,12 @@ def submit_form_azure():
 @app.route('/json_submit_form_azure', methods=['POST'])
 def json_submit_form_azure():
     # Get  azure form data
-    subscription_id = request.form.get('subscription_id')
-    client_id = request.form.get('client_id')
-    client_secret = request.form.get('client_secret')
-    tenant_id = request.form.get('tenant_id')
-    User_name = request.form.get('User_name')
+    form = request.get_json()
+    subscription_id = form['subscription_id']
+    client_id = form['client_id']
+    client_secret = form['client_secret']
+    tenant_id = form['tenant_id']
+    User_name = form['User_name']
     User_Id = str(int(random.random()))
  
     # Write Azure form data to terraform.vars file
