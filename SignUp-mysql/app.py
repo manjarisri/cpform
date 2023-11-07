@@ -281,9 +281,139 @@ def create_aws():
 @app.route('/azure')
 def azure():
     return render_template('azure.html')
- 
+
 @app.route('/submit_form_azure', methods=['POST'])
 def submit_form_azure():
+    # Get  azure form data
+    subscription_id = request.form.get('subscription_id')
+    client_id = request.form.get('client_id')
+    client_secret = request.form.get('client_secret')
+    tenant_id = request.form.get('tenant_id')
+    User_name = request.form.get('User_name')
+    User_Id = str(int(random.random()))
+ 
+    # Write Azure form data to terraform.vars file
+    with open('terraform.tfvars', 'w') as f:
+        f.write(f'username = "{User_name}"\n')
+        f.write(f'subscription_id = "{subscription_id}"\n')
+        f.write(f'client_id = "{client_id}"\n')
+        f.write(f'client_secret = "{client_secret}"\n')
+        f.write(f'tenant_id = "{tenant_id}"\n')
+   
+    ## starting the script
+ 
+    # Azure Resource Group and Key Vault Configuration
+    resource_group_name = "rupali-rg"  
+    key_vault_name = User_name + User_Id
+    secrets_file_path = "./terraform.tfvars"
+
+
+    user_detail = {
+        "user": User_name
+    }
+
+    print("User name:", User_name)
+
+    file_name = "user_name.json"
+
+    with open(file_name, 'w') as file:
+        json.dump(user_detail, file)
+
+ 
+   # Replace underscores with hyphens in the Key Vault and Resource Group names
+    key_vault_name = key_vault_name.replace("_", "-")
+    resource_group_name = resource_group_name.replace("_", "-")    
+    subscription_id = '1ce8bf33-286c-42dd-b193-10c310dd14b7'
+    client_id = '4b5bd0f1-f692-47dd-a186-c8bf1925a86b'
+    client_secret = 'N6C8Q~IP4Ls3SeCGkN4gOI0zUYjAEhM0A_d4Aa1K'
+    tenant_id = 'bddba232-ecf3-49b7-a5b2-7cd128fc6135'
+    matching_secret_found = False
+    credential = ClientSecretCredential(tenant_id, client_id, client_secret)
+    keyvault_client = KeyVaultManagementClient(credential, subscription_id)
+    # Read secrets from the file
+    secrets = {}
+    with open(secrets_file_path, "r") as file:
+        for line in file:
+            key, value = line.strip().split(" = ")
+            secrets[key] = value
+    with open("./terraform.tfvars", "r") as file:
+     for line in file:
+        if line.strip().startswith('client_secret'):
+            key, value = line.strip().split(' = ')
+            # print(value)
+            client_secret = value
+ 
+    # print (client_secret)
+ 
+    keyvaults = keyvault_client.vaults.list()
+    for vault in keyvaults:
+        vault_name = vault.name
+        keyvault_url = f"https://{vault_name}.vault.azure.net/"
+        secret_client = SecretClient(vault_url=keyvault_url, credential=credential)
+        secret_name = "client-secret"
+        try:
+            secret = secret_client.get_secret(secret_name)
+            secret_value = secret.value
+            decoded_bytes = base64.b64decode(secret_value)
+            decoded_string = decoded_bytes.decode('utf-8')
+            # print(decoded_string)
+            if decoded_string == client_secret:
+                print(f"Key Vault '{vault_name}' has the matching secret: '{secret_name}'")
+                matching_secret_found = True
+                break  # Stop the loop when a matching secret is found
+        except Exception as e:
+            print(f"Key Vault '{vault_name}' does not contain the secret: '{secret_name}'")
+    if not matching_secret_found:
+        print("No matching secret found in any of the Key Vaults.")
+ 
+    # Authenticate to Azure
+ 
+        try:
+            # Use Azure CLI to get the access token
+            access_token = subprocess.check_output(["az", "account", "get-access-token", "--query", "accessToken", "-o", "tsv"]).decode("utf-8").strip()
+        except subprocess.CalledProcessError:
+            print("Error: Failed to obtain Azure access token. Make sure you are logged into Azure CLI.")
+            exit(1)
+ 
+        # Create Azure Key Vault in the specified Resource Group
+        try:
+            subprocess.check_call(["az", "keyvault", "create", "--name", key_vault_name, "--resource-group", resource_group_name, "--location", "southcentralus"])
+            print(f"Azure Key Vault '{key_vault_name}' created successfully in Resource Group '{resource_group_name}'.")
+        except subprocess.CalledProcessError:
+            print(f"Azure Key Vault '{key_vault_name}' already exists or encountered an error during creation in Resource Group '{resource_group_name}'.")
+ 
+        
+        # Store secrets in Azure Key Vault
+        for key, value in secrets.items():
+            # Replace underscores with hyphens in the secret name
+            key = key.replace("_", "-")
+            encoded_value = base64.b64encode(value.encode("utf-8")).decode("utf-8")     
+            command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {encoded_value} --output none --query 'value'"
+            # command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {value} --output none --query 'value'"
+ 
+            try:
+                # Use Azure CLI to set the secret in the Key Vault
+                subprocess.check_call(["bash", "-c", f'AZURE_ACCESS_TOKEN="{access_token}" {command}'])
+                print(f"Secret '{key}' stored in Azure Key Vault '{key_vault_name}' successfully.")
+            except subprocess.CalledProcessError as e:
+                print(f"Error: Failed to store secret '{key}' in Azure Key Vault '{key_vault_name}'.")
+                print(e)
+ 
+        
+        print("All secrets have been stored in Azure Key Vault.")
+        
+        os.remove(secrets_file_path)     
+        
+        with open(secrets_file_path, "w"):         pass
+    
+    ## ending the script
+
+    return render_template('create_aks.html')
+
+
+
+@app.route('/json_submit_form_azure', methods=['POST'])
+def json_submit_form_azure():
     # Get  azure form data
     subscription_id = request.form.get('subscription_id')
     client_id = request.form.get('client_id')
