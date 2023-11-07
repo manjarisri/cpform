@@ -666,9 +666,14 @@ def json_create_aks():
 
 
     file_name = "./user_name.json"
+    if os.path.exists(file_name):
+        with open(file_name, 'r') as file:
+            user_data = json.load(file)
+    else:
+        return json.dumps({
+            "message": "failed to trigger"
+        }),409
 
-    with open(file_name, 'r') as file:
-        user_data = json.load(file)
 
     print("user name is:", user_data["user"])
 
