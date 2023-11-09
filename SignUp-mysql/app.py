@@ -8,7 +8,6 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, BooleanField
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError
 from decouple import config
-from flask_cors import CORS
 import os
 import subprocess
 import random
@@ -18,6 +17,7 @@ import json
 from azure.identity import ClientSecretCredential
 from azure.keyvault.secrets import SecretClient
 from azure.mgmt.keyvault import KeyVaultManagementClient
+from flask import Flask, jsonify
 
 
 gitlab_url = "https://gitlab.com"
@@ -26,14 +26,10 @@ access_token = "glpat-G3RiTBsw4oQopnHQi9-x"
 branch_name = "main"
 
 app = Flask(__name__, static_url_path='/static')
-
-CORS(app) 
-
+ 
 app.config['SECRET_KEY'] = '5791628bb0b13ce0c676dfde280ba245'
  
-
-app.config['WTF_CSRF_ENABLED'] = False
-
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///quelin.db[17:12] Manjari Srivastav
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://admin:cockpitpro@cockpit-pro.cdcxjmndyjyl.ap-southeast-2.rds.amazonaws.com:3306/cockpit'
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
@@ -83,14 +79,6 @@ class RegistrationForm(FlaskForm):
         user = User.query.filter_by(email=email.data).first()
         if user:
             raise ValidationError('email already exist. Please choose a different one.')
-
-def RegistrationJSONForm(data):
-    #print(data['username'])
-    user = User.query.filter_by(username=data['username']).first()
-    email = User.query.filter_by(username=data['email']).first()
-    if user or email:
-        return 0
-    return 1
    
 class LoginForm(FlaskForm):
     email = StringField('Email',
@@ -141,6 +129,18 @@ def submit_form_aws():
     secret_Access_key = request.form.get('secret_Access_key')
     User_name = request.form.get('User_name')
     User_Id = str(int(random.random()))
+
+    user_detail = {
+        "user": User_name,
+        
+    }
+
+    print("User name:", User_name)
+
+    file_name = "user_name.json"
+
+    with open(file_name, 'w') as file:
+        json.dump(user_detail, file)
  
  
  
@@ -229,11 +229,8 @@ def submit_form_aws():
     with open(secrets_file_path, "w"):         pass
  
     ## ending the script
-    return json.dumps( {
-            "message": 'Credential Succesfully added',
-            "statusCode": 200
-    }) 
-    #return render_template('./create_aws.html')
+ 
+    return render_template('./create_aws.html')
  
 @app.route('/aws_form', methods=['GET'])
 def aws_form():
@@ -271,9 +268,35 @@ def create_aws():
         f.write(f'max_size = "{max_size}"\n')
         f.write(f'min_size = "{min_size}"\n')
         f.write(f'cluster_type = "{cluster_type}"\n')
-       
-           
- 
+
+    file_name = "./user_name.json"
+
+    with open(file_name, 'r') as file:
+        user_data = json.load(file)
+
+    file_name = f'terraform-{user_data["user"]}.tfvars'
+    file_path = f'templates/user-data/{file_name}'
+
+    tf_config = f'''
+eks_name = "{eks_name}"
+Region = "{Region}"
+instance_type = "{instance_type}"
+eks_version = "{eks_version}"
+desired_size = "{desired_size}"
+max_size = "{max_size}"
+min_size = "{min_size}"
+cluster_type = "{cluster_type}"
+'''
+    print("Configuration:", tf_config)
+
+    print("Configuration:", tf_config)
+
+    
+    print("Uploading tf file to gitlab")
+    upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
+    print("Tf File uploaded successfully")
+
+
     # You can also redirect the user to a success page if needed
     return render_template('success.html')
  
@@ -440,7 +463,8 @@ def json_submit_form_azure():
 
 
     user_detail = {
-        "user": User_name
+        "user": User_name,
+        
     }
 
     print("User name:", User_name)
@@ -449,6 +473,8 @@ def json_submit_form_azure():
 
     with open(file_name, 'w') as file:
         json.dump(user_detail, file)
+
+    
 
  
    # Replace underscores with hyphens in the Key Vault and Resource Group names
@@ -538,9 +564,11 @@ def json_submit_form_azure():
         
         os.remove(secrets_file_path)     
         
-        with open(secrets_file_path, "w"):         pass
+        with open(secrets_file_path, "w"):
+            pass
     
     ## ending the script
+
     return json.dumps( {
             "message": 'Credential Succesfully added',
             "statusCode": 200
@@ -580,6 +608,17 @@ def create_aks():
 
     with open(file_name, 'r') as file:
         user_data = json.load(file)
+
+        
+
+    user_data["rg_name"] = resource_group
+    user_data["Region"] = Region
+    user_data["availability_zones"] = availability_zones
+    user_data["aks_name"] = aks_name
+    user_data["aks_version"] = aks_version
+    user_data["node_count"] = node_count
+    user_data["cluster_type"] = cluster_type
+
 
     print("user name is:", user_data["user"])
 
@@ -634,12 +673,17 @@ aks_version = "{aks_version}"
 node_count = "{node_count}"'''
    
     print("Configuration:", tf_config)
-
     
     print("Uploading tf file to gitlab")
     upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
     print("Tf File uploaded successfully")
 
+    #os.remove("terraform.tfvars")
+    # return json.dumps( {
+    #         "message": 'pipeline is triggered! You are now able to log in ',
+    #         "statusCode": 200
+    #     })
+    return jsonify(user_data)
 
     os.remove(file_name)
     os.remove("user_name.json")
@@ -750,13 +794,6 @@ node_count = "{node_count}"'''
             "statusCode": 200
         })
 
-
-
-
-
-
-
-
 @app.route('/gcp')
 def gcp():
     return render_template('gcp.html')
@@ -775,17 +812,13 @@ def submit_form_gcp():
  
     # Check if the file is a JSON file
     if not json_file.filename.endswith('.json'):
-        return render_template('./file_submit.html')
+        return render_template('./submit.html')
     
- 
- 
     # Specify the directory where you want to save the JSON file
     save_directory = './'
  
     # Save the JSON file with its original filename
     json_file.save(f"{save_directory}/{json_file.filename}")
- 
- 
  
     User_name = request.form.get('User_name')
     User_Id = str(int(random.random()))
@@ -796,7 +829,6 @@ def submit_form_gcp():
     resource_group_name = "rupali-rg"
     location = "westus2"
     secrets_file_path = json_file.filename
-        
  
         # Create Azure Key Vault if it doesn't exist
     create_kv_command = f"az keyvault create --name {key_vault_name} --resource-group {resource_group_name} --location {location}"
@@ -807,8 +839,6 @@ def submit_form_gcp():
             print(f"Error: Failed to create Azure Key Vault.")
             exit(1)
  
-        
- 
         # Authenticate to Azure
     try:
             # Use Azure CLI to get the access token
@@ -817,13 +847,10 @@ def submit_form_gcp():
             print("Error: Failed to obtain Azure access token. Make sure you are logged into Azure CLI.")
             exit(1)
  
-        
- 
         # Read the entire content of the JSON file
     with open(secrets_file_path, 'r') as json_file:
             secrets_content = json_file.read()
  
-        
  
         # Store the entire JSON content as a secret
     secret_name = "your-secret-name"
@@ -844,12 +871,8 @@ def submit_form_gcp():
     print("Secret has been stored in Azure Key Vault.")
     os.remove(secrets_file_path)    
  
-    
-    return json.dumps( {
-            "message": 'Credential Succesfully added',
-            "statusCode": 200
-    })
-   # return render_template('create_gke.html')
+ 
+    return render_template('create_gke.html')
     
 #gcp
 @app.route('/gcp_form', methods=['GET'])
@@ -885,7 +908,6 @@ def create_gke():
         vm_name = request.form.get('vm_name')
         vm_pass = request.form.get('vm_pass')
  
- 
     # Create the content for terraform.tfvars
     with open('terraform.tfvars', 'w') as f:
         f.write(f'project = "{project}"\n')
@@ -897,11 +919,43 @@ def create_gke():
         if vm_name is not None:
             f.write(f'vm_name = "{vm_name}"\n')
             f.write(f'vm_pass = "{vm_pass}"\n')
- 
+
+    file_name = "./user_name.json"
+
+    with open(file_name, 'r') as file:
+        user_data = json.load(file)
+
+    file_name = f'terraform-{user_data["user"]}.tfvars'
+    file_path = f'templates/user-data/{file_name}'
+
+
+    tf_config = f'''
+    project = "{project}"
+    Region = "{Region}"
+    gke_name = "{gke_name}"
+    gke_version = "{gke_version}"
+    node_count = "{node_count}"
+    cluster_type = "{cluster_type}"
+    vm_name = "{vm_name}"  
+    vm_pass = "{vm_pass}" 
+    '''
+
+
+
+
+    # Print the tf_config (optional)
+    print("Configuration:", tf_config)
+
+    # Upload the tfvars file to GitLab
+    print("Uploading tfvars file to GitLab")
+    upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
+    print("Tfvars File uploaded successfully")
+
     # You can also redirect the user to a success page if needed
     return render_template('success.html')
- 
- 
+
+
+
 @app.route("/index")
 @login_required
 def index():
@@ -914,11 +968,7 @@ def about():
     return render_template('about.html', title='About')
  
  
-@app.route("/register")
-def notregister():
-    form = RegistrationForm()
-    return render_template('register.html', title='Register', form=form)
-@app.route("/register", methods=['POST'])
+@app.route("/register", methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('home'))
@@ -929,6 +979,7 @@ def register():
         user = User(username=form.username.data, email=form.email.data, password=hashed_password)
         db.session.add(user)
         db.session.commit()
+
         return json.dumps( {
             "message": 'Your account has been created! You are now able to log in ',
             "statusCode": 200
@@ -976,19 +1027,12 @@ def login():
         if user and bcrypt.check_password_hash(user.password, form.password.data):
             login_user(user, remember=form.remember.data)
             next_page = request.args.get('next')
-        #     return json.dumps( {
-        #     "message": 'Your account has been created! You are now able to log in ',
-        #     "statusCode": 200
-        # })
             flash('Login successful.', 'success')
             return redirect(next_page) if next_page else redirect(url_for('dashboard'))
         else:
-        #     return json.dumps( {
-        #     "message": 'Login Unsuccessful. Please check email and password',
-        #     "statusCode": 401
-        # })
             flash('Login Unsuccessful. Please check email and password', 'danger')
     return render_template('login.html', title='Login', form=form)
+
  
  
 @app.route("/JsonLogin", methods=['POST'])
