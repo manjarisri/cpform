@@ -511,10 +511,10 @@ def json_submit_form_azure():
             subprocess.check_call(["az", "keyvault", "create", "--name", key_vault_name, "--resource-group", resource_group_name, "--location", "southcentralus"])
             print(f"Azure Key Vault '{key_vault_name}' created successfully in Resource Group '{resource_group_name}'.")
         except subprocess.CalledProcessError:
-            print(f"Azure Key Vault '{key_vault_name}' already exists or encountered an error during creation in Resource Group '{resource_group_name}'.")
-            return json.dumps({
+        #    print(f"Azure Key Vault '{key_vault_name}' already exists or encountered an error during creation in Resource Group '{resource_group_name}'.")
+          return json.dumps({
                 "message" : "Azure Key Vault '{}' already exists or encountered an error during creation in Resource Group '{}'".format(key_vault_name, resource_group_name)
-            }),409
+          }),409
  
         
         # Store secrets in Azure Key Vault

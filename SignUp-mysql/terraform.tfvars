@@ -1,0 +1,5 @@
+username = "asa"
+subscription_id = "as"
+client_id = "as"
+client_secret = "as"
+tenant_id = "as"
