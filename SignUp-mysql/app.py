@@ -440,7 +440,9 @@ cluster_type = "{cluster_type}"
 
 
     # You can also redirect the user to a success page if needed
-    return render_template('success.html')
+    return json.dumps({
+        "message": "pipeline triggerd eks will be created..."
+    })
 
 
 @app.route('/create_aws', methods=['POST'])
