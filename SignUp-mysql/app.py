@@ -8,6 +8,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, BooleanField
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError
 from decouple import config
+from flask_cors import CORS
 import os
 import subprocess
 import random
@@ -26,10 +27,14 @@ access_token = "glpat-G3RiTBsw4oQopnHQi9-x"
 branch_name = "main"
 
 app = Flask(__name__, static_url_path='/static')
- 
+
+CORS(app) 
+
 app.config['SECRET_KEY'] = '5791628bb0b13ce0c676dfde280ba245'
  
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///quelin.db[17:12] Manjari Srivastav
+
+app.config['WTF_CSRF_ENABLED'] = False
+
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://admin:cockpitpro@cockpit-pro.cdcxjmndyjyl.ap-southeast-2.rds.amazonaws.com:3306/cockpit'
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
@@ -79,7 +84,19 @@ class RegistrationForm(FlaskForm):
         user = User.query.filter_by(email=email.data).first()
         if user:
             raise ValidationError('email already exist. Please choose a different one.')
-   
+
+
+
+
+
+def RegistrationJSONForm(data):
+    #print(data['username'])
+    user = User.query.filter_by(username=data['username']).first()
+    email = User.query.filter_by(username=data['email']).first()
+    if user or email:
+        return 0
+    return 1
+    
 class LoginForm(FlaskForm):
     email = StringField('Email',
     validators=[DataRequired(), Email()])
@@ -229,9 +246,12 @@ def submit_form_aws():
     with open(secrets_file_path, "w"):         pass
  
     ## ending the script
- 
-    return render_template('./create_aws.html')
- 
+    return json.dumps( {
+            "message": 'Credential Succesfully added',
+            "statusCode": 200
+    }) 
+    #return render_template('./create_aws.html')
+
 @app.route('/aws_form', methods=['GET'])
 def aws_form():
     return render_template('create_aws.html')
@@ -298,7 +318,10 @@ cluster_type = "{cluster_type}"
 
 
     # You can also redirect the user to a success page if needed
-    return render_template('success.html')
+    return json.dumps( {
+            "message": 'aws eks is created',
+            "statusCode": 200
+    })
  
 #azure form
 @app.route('/azure')
@@ -564,9 +587,8 @@ def json_submit_form_azure():
         
         os.remove(secrets_file_path)     
         
-        with open(secrets_file_path, "w"):
-            pass
-    
+        with open(secrets_file_path, "w"):         pass
+     
     ## ending the script
 
     return json.dumps( {
@@ -871,9 +893,13 @@ def submit_form_gcp():
     print("Secret has been stored in Azure Key Vault.")
     os.remove(secrets_file_path)    
  
- 
-    return render_template('create_gke.html')
     
+    return json.dumps( {
+            "message": 'Credential Succesfully added',
+            "statusCode": 200
+    })
+   # return render_template('create_gke.html')
+   
 #gcp
 @app.route('/gcp_form', methods=['GET'])
 def gcp_form():
@@ -952,7 +978,11 @@ def create_gke():
     print("Tfvars File uploaded successfully")
 
     # You can also redirect the user to a success page if needed
-    return render_template('success.html')
+    return json.dumps( {
+            "message": 'gke created Succesfully',
+            "statusCode": 200
+    })
+    #return render_template('success.html')
 
 
 

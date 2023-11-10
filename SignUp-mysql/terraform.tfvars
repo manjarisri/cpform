@@ -1,0 +1,5 @@
+username = "dcew"
+subscription_id = "manj"
+client_id = "amdbjs"
+client_secret = "sd"
+tenant_id = "dw"
