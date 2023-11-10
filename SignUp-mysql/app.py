@@ -148,9 +148,9 @@ def json_submit_form_aws():
 # Get  AWS form data
     
     form = request.get_json()
-    access_key = form['access_key']
+    Access_key = form['access_key']
     secret_Access_key = form['secret_Access_key']
-    user_name = form['user_name']
+    User_name = form['user_name']
     User_Id = str(int(random.random()))
 
     user_detail = {
