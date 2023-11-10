@@ -149,7 +149,7 @@ def json_submit_form_aws():
     
     form = request.get_json()
     Access_key = form['access_key']
-    secret_Access_key = form['secret_Access_key']
+    secret_Access_key = form['secret_access_key']
     User_name = form['user_name']
     User_Id = str(int(random.random()))
 
