@@ -383,11 +383,70 @@ def create_aws_form():
 @app.route('/success', methods=['GET'])
 def success_aws():
     return render_template('success.html')
+
+
+@app.route('/json_create_aws', methods=['POST'])
+def json_create_aws():
+    # Retrieve form data
+    form = request.get_json()
+    eks_name = form['eks_name']
+    Region = form['region']
+    instance_type = form['instance_type']
+    eks_version = form['eks_version']
+    desired_size = form['desired_size']
+    max_size = form['max_size']
+    min_size = form['min_size']
+    cluster_type = form['cluster_type']
+    
+    eks_version = float(eks_version)
  
+    # Create the content for terraform.tfvars
+    with open('terraform.tfvars', 'w') as f:
+        f.write(f'eks_name = "{eks_name}"\n')
+        f.write(f'Region = "{Region}"\n')
+        f.write(f'instance_type = "{instance_type}"\n')
+        f.write(f'eks_version = "{eks_version}"\n')
+        f.write(f'desired_size = "{desired_size}"\n')
+        f.write(f'max_size = "{max_size}"\n')
+        f.write(f'min_size = "{min_size}"\n')
+        f.write(f'cluster_type = "{cluster_type}"\n')
+
+    file_name = "./user_name.json"
+
+    with open(file_name, 'r') as file:
+        user_data = json.load(file)
+
+    file_name = f'terraform-{user_data["user"]}.tfvars'
+    file_path = f'templates/user-data/{file_name}'
+
+    tf_config = f'''
+eks_name = "{eks_name}"
+Region = "{Region}"
+instance_type = "{instance_type}"
+eks_version = "{eks_version}"
+desired_size = "{desired_size}"
+max_size = "{max_size}"
+min_size = "{min_size}"
+cluster_type = "{cluster_type}"
+'''
+    print("Configuration:", tf_config)
+
+    print("Configuration:", tf_config)
+
+    
+    print("Uploading tf file to gitlab")
+    upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
+    print("Tf File uploaded successfully")
+
+
+    # You can also redirect the user to a success page if needed
+    return render_template('success.html'
+
+
 @app.route('/create_aws', methods=['POST'])
 def create_aws():
     # Retrieve form data
-    eks_name = request.form.get('eks_name')
+    eks_name = request.form('eks_name')
     Region = request.form.get('Region')
     instance_type = request.form.get('instance_type')
     eks_version = request.form.get('eks_version')
@@ -438,10 +497,7 @@ cluster_type = "{cluster_type}"
 
 
     # You can also redirect the user to a success page if needed
-    return json.dumps( {
-            "message": 'aws eks is created',
-            "statusCode": 200
-    })
+    return render_template('success.html')
  
 #azure form
 @app.route('/azure')
