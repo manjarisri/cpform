@@ -448,7 +448,7 @@ cluster_type = "{cluster_type}"
 @app.route('/create_aws', methods=['POST'])
 def create_aws():
     # Retrieve form data
-    eks_name = request.form('eks_name')
+    eks_name = request.form.get('eks_name')
     Region = request.form.get('Region')
     instance_type = request.form.get('instance_type')
     eks_version = request.form.get('eks_version')
