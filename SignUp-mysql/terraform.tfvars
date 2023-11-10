@@ -1,5 +1,2 @@
-username = "dcew"
-subscription_id = "manj"
-client_id = "amdbjs"
-client_secret = "sd"
-tenant_id = "dw"
+Access_key = "AKIA6AJRQM4Z2J75QS7U"
+secret_Access_key = "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"
