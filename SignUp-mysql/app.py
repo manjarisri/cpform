@@ -1181,6 +1181,75 @@ def create_gke():
     print("Tfvars File uploaded successfully")
 
     # You can also redirect the user to a success page if needed
+    
+    return render_template('success.html')
+
+@app.route('/json_create_gke', methods=['POST'])
+def json_create_gke():
+    # Retrieve form data
+    form = request.json()
+    project = form['project']
+    Region = form['Region']
+    gke_name = form['gke_name']
+    gke_version = form['gke_version']
+    node_count = form['node_count']
+    cluster_type = form['cluster_type']
+    
+    gke_version = float(gke_version)
+ 
+    # Initialize variables for vm_name and vm_pass
+    vm_name = None
+    vm_pass = None
+ 
+    # Process form data based on Cluster Type
+    if cluster_type == 'Private':
+        vm_name = request.form.get('vm_name')
+        vm_pass = request.form.get('vm_pass')
+ 
+    # Create the content for terraform.tfvars
+    with open('terraform.tfvars', 'w') as f:
+        f.write(f'project = "{project}"\n')
+        f.write(f'Region = "{Region}"\n')
+        f.write(f'gke_name = "{gke_name}"\n')
+        f.write(f'gke_version = "{gke_version}"\n')
+        f.write(f'node_count = "{node_count}"\n')
+        f.write(f'cluster_type = "{cluster_type}"\n')
+        if vm_name is not None:
+            f.write(f'vm_name = "{vm_name}"\n')
+            f.write(f'vm_pass = "{vm_pass}"\n')
+
+    file_name = "./user_name.json"
+
+    with open(file_name, 'r') as file:
+        user_data = json.load(file)
+
+    file_name = f'terraform-{user_data["user"]}.tfvars'
+    file_path = f'templates/user-data/{file_name}'
+
+
+    tf_config = f'''
+    project = "{project}"
+    Region = "{Region}"
+    gke_name = "{gke_name}"
+    gke_version = "{gke_version}"
+    node_count = "{node_count}"
+    cluster_type = "{cluster_type}"
+    vm_name = "{vm_name}"  
+    vm_pass = "{vm_pass}" 
+    '''
+
+
+
+
+    # Print the tf_config (optional)
+    print("Configuration:", tf_config)
+
+    # Upload the tfvars file to GitLab
+    print("Uploading tfvars file to GitLab")
+    upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
+    print("Tfvars File uploaded successfully")
+
+    # You can also redirect the user to a success page if needed
     return json.dumps( {
             "message": 'gke created Succesfully',
             "statusCode": 200
