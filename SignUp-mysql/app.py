@@ -1187,7 +1187,7 @@ def create_gke():
 @app.route('/json_create_gke', methods=['POST'])
 def json_create_gke():
     # Retrieve form data
-    form = request.json()
+    form = request.get_json()
     project = form['project']
     Region = form['Region']
     gke_name = form['gke_name']
