@@ -1,4 +1,5 @@
 
+
 from flask import Flask, render_template, url_for, flash, redirect, request
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
@@ -169,6 +170,7 @@ def json_submit_form_aws():
  
     # Write AWS form data to terraform.vars file
     with open('terraform.tfvars', 'w') as f:
+        f.write(f'Username = "{User_name}"\n')
         f.write(f'Access_key = "{Access_key}"\n')
         f.write(f'secret_Access_key = "{secret_Access_key}"\n')
     
@@ -176,7 +178,7 @@ def json_submit_form_aws():
      ## starting the script
  
     # Azure Resource Group and Key Vault Configuration
-    resource_group_name = "prashant-rg"  
+    resource_group_name = "rupali-rg"  
     key_vault_name = User_name
     secrets_file_path = "./terraform.tfvars"
  
@@ -200,62 +202,85 @@ def json_submit_form_aws():
         for line in file:
             key, value = line.strip().split(" = ")
             secrets[key] = value
-    
+    with open("./terraform.tfvars", "r") as file:
+       for line in file:
+          if line.strip().startswith('Access_key'):
+             key, value = line.strip().splite(' = ')
+             Access_key = value    
     
  
     
- 
+    keyvaults = keyvault_client.vaults.list()
+    for vault in keyvaults:
+        vault_name = vault.name
+        keyvault_url = f"https://{vault_name}.vault.azure.net/"
+        Accesskey = SecretClient(vault_url=keyvault_url, credential=credential)
+        key_name = "Access_key"
+        try:
+          key = Accesskey.get_secret(key_name)
+          key_value = key.value
+          decoded_bytes = base64.b64decode(key_value)
+          decoded_string = decoded_bytes.decode('utf-8')
+          if decoded_string == Access_key:
+                print(f"Key Vault '{vault_name}' has the matching secret: '{secret_name}'")
+                matching_secret_found = True
+                break 
+        except Exception as e:
+             print(f"Key Vault '{vault_name}' does not contain the secret: '{secret_name}'")
+    if not matching_secret_found:
+       print("No matching secret found in any of the Key Vaults.")
+       
     # Authenticate to Azure
-    try:
-        # Use Azure CLI to get the access token
-        access_token = subprocess.check_output(["az", "account", "get-access-token", "--query", "accessToken", "-o", "tsv"]).decode("utf-8").strip()
-    except subprocess.CalledProcessError:
-        print("Error: Failed to obtain Azure access token. Make sure you are logged into Azure CLI.")
-        exit(1)
- 
+       try:
+            # Use Azure CLI to get the access token
+            access_token = subprocess.check_output(["az", "account", "get-access-token", "--query", "accessToken", "-o", "tsv"]).decode("utf-8").strip()
+       except subprocess.CalledProcessError:
+            print("Error: Failed to obtain Azure access token. Make sure you are logged into Azure CLI.")
+            exit(1)
+       
  
     # Create Azure Key Vault in the specified Resource Group
-    try:
+       try:
         subprocess.check_call(["az", "keyvault", "create", "--name", key_vault_name, "--resource-group", resource_group_name, "--location", "southcentralus"])
         print(f"Azure Key Vault '{key_vault_name}' created successfully in Resource Group '{resource_group_name}'.")
-    except subprocess.CalledProcessError:
+       except subprocess.CalledProcessError:
         print(f"Azure Key Vault '{key_vault_name}' already exists or encountered an error during creation in Resource Group '{resource_group_name}'.")
  
     
  
     # Store secrets in Azure Key Vault
-    for key, value in secrets.items():
+       for key, value in secrets.items():
         # Replace underscores with hyphens in the secret name
-        key = key.replace("_", "-")
-        encoded_value = base64.b64encode(value.encode("utf-8")).decode("utf-8")     
-        command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {encoded_value} --output none --query 'value'"
+         key = key.replace("_", "-")
+         encoded_value = base64.b64encode(value.encode("utf-8")).decode("utf-8")     
+         command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {encoded_value} --output none --query 'value'"
         # command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {value} --output none --query 'value'"
  
     
  
-        try:
+         try:
             # Use Azure CLI to set the secret in the Key Vault
             subprocess.check_call(["bash", "-c", f'AZURE_ACCESS_TOKEN="{access_token}" {command}'])
             print(f"Secret '{key}' stored in Azure Key Vault '{key_vault_name}' successfully.")
-        except subprocess.CalledProcessError as e:
+         except subprocess.CalledProcessError as e:
             print(f"Error: Failed to store secret '{key}' in Azure Key Vault '{key_vault_name}'.")
             print(e)
  
     
  
-    print("All secrets have been stored in Azure Key Vault.")
+       print("All secrets have been stored in Azure Key Vault.")
     
  
-    os.remove(secrets_file_path)     
+       os.remove(secrets_file_path)     
     
  
-    with open(secrets_file_path, "w"):         pass
+       with open(secrets_file_path, "w"):         pass
  
     ## ending the script
-    return json.dumps( {
+       return json.dumps( {
             "message": 'Credential Succesfully added',
             "statusCode": 200
-    }) 
+       }) 
     #return render_template('./create_aws.html')
  
 @app.route('/submit_form', methods=['POST'])
@@ -290,7 +315,7 @@ def submit_form_aws():
      ## starting the script
  
     # Azure Resource Group and Key Vault Configuration
-    resource_group_name = "prashant-rg"  
+    resource_group_name = "rupali-rg"  
     key_vault_name = User_name
     secrets_file_path = "./terraform.tfvars"
  
@@ -1024,7 +1049,7 @@ def submit_form_gcp():
     User_Id = str(int(random.random()))
  
     # Azure Key Vault and Secrets Configuration
-    key_vault_name = User_name + User_Id
+    key_vault_name = User_name
  
     resource_group_name = "rupali-rg"
     location = "westus2"
