@@ -1,0 +1,6 @@
+project = "manjari Project"
+Region = "East US"
+gke_name = "manjaris"
+gke_version = "1.13"
+node_count = "1"
+cluster_type = "Public"
