@@ -23,9 +23,12 @@ from flask import Flask, jsonify
 
 
 gitlab_url = "https://gitlab.com"
-project_id = "51066584"
-access_token = "glpat-G3RiTBsw4oQopnHQi9-x"
-branch_name = "main"
+project_id = "51819357"
+access_token = "glpat-EmyFa2Kj5NCy8gUiu4qG"    
+branch_name = "featurebrach1"
+#project_id = "51066584"
+#access_token = "glpat-G3RiTBsw4oQopnHQi9-x"
+#branch_name = "main"
 
 app = Flask(__name__, static_url_path='/static')
 
@@ -205,7 +208,7 @@ def json_submit_form_aws():
     with open("./terraform.tfvars", "r") as file:
        for line in file:
           if line.strip().startswith('Access_key'):
-             key, value = line.strip().splite(' = ')
+             key, value = line.strip().split(" = ")
              Access_key = value    
     
  
@@ -219,14 +222,14 @@ def json_submit_form_aws():
         try:
           key = Accesskey.get_secret(key_name)
           key_value = key.value
-          decoded_bytes = base64.b64decode(key_value)
-          decoded_string = decoded_bytes.decode('utf-8')
-          if decoded_string == Access_key:
-                print(f"Key Vault '{vault_name}' has the matching secret: '{secret_name}'")
+         # decoded_bytes = base64.b64decode(key_value)
+         # decoded_string = decoded_bytes.decode('utf-8')
+          if key_value == Access_key:
+                print(f"Key Vault '{vault_name}' has the matching secret: '{key_name}'")
                 matching_secret_found = True
                 break 
         except Exception as e:
-             print(f"Key Vault '{vault_name}' does not contain the secret: '{secret_name}'")
+             print(f"Key Vault '{vault_name}' does not contain the secret: '{key_name}'")
     if not matching_secret_found:
        print("No matching secret found in any of the Key Vaults.")
        
@@ -252,9 +255,9 @@ def json_submit_form_aws():
        for key, value in secrets.items():
         # Replace underscores with hyphens in the secret name
          key = key.replace("_", "-")
-         encoded_value = base64.b64encode(value.encode("utf-8")).decode("utf-8")     
-         command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {encoded_value} --output none --query 'value'"
-        # command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {value} --output none --query 'value'"
+         #encoded_value = base64.b64encode(value.encode("utf-8")).decode("utf-8")     
+         #command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {encoded_value} --output none --query 'value'"
+         command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {value} --output none --query 'value'"
  
     
  
@@ -366,9 +369,9 @@ def submit_form_aws():
     for key, value in secrets.items():
         # Replace underscores with hyphens in the secret name
         key = key.replace("_", "-")
-        encoded_value = base64.b64encode(value.encode("utf-8")).decode("utf-8")     
-        command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {encoded_value} --output none --query 'value'"
-        # command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {value} --output none --query 'value'"
+        #encoded_value = base64.b64encode(value.encode("utf-8")).decode("utf-8")     
+        #command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {encoded_value} --output none --query 'value'"
+        command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {value} --output none --query 'value'"
  
     
  
@@ -442,7 +445,7 @@ def json_create_aws():
         user_data = json.load(file)
 
     file_name = f'terraform-{user_data["user"]}.tfvars'
-    file_path = f'templates/user-data/{file_name}'
+    file_path = f'aws/templates/{file_name}'
 
     tf_config = f'''
 eks_name = "{eks_name}"
@@ -603,10 +606,10 @@ def submit_form_azure():
         try:
             secret = secret_client.get_secret(secret_name)
             secret_value = secret.value
-            decoded_bytes = base64.b64decode(secret_value)
-            decoded_string = decoded_bytes.decode('utf-8')
+          #  decoded_bytes = base64.b64decode(secret_value)
+         #   decoded_string = decoded_bytes.decode('utf-8')
             # print(decoded_string)
-            if decoded_string == client_secret:
+            if secret_value == client_secret:
                 print(f"Key Vault '{vault_name}' has the matching secret: '{secret_name}'")
                 matching_secret_found = True
                 break  # Stop the loop when a matching secret is found
@@ -636,9 +639,9 @@ def submit_form_azure():
         for key, value in secrets.items():
             # Replace underscores with hyphens in the secret name
             key = key.replace("_", "-")
-            encoded_value = base64.b64encode(value.encode("utf-8")).decode("utf-8")     
-            command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {encoded_value} --output none --query 'value'"
-            # command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {value} --output none --query 'value'"
+            #encoded_value = base64.b64encode(value.encode("utf-8")).decode("utf-8")     
+            #command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {encoded_value} --output none --query 'value'"
+            command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {value} --output none --query 'value'"
  
             try:
                 # Use Azure CLI to set the secret in the Key Vault
@@ -737,10 +740,10 @@ def json_submit_form_azure():
         try:
             secret = secret_client.get_secret(secret_name)
             secret_value = secret.value
-            decoded_bytes = base64.b64decode(secret_value)
-            decoded_string = decoded_bytes.decode('utf-8')
+            #decoded_bytes = base64.b64decode(secret_value)
+            #decoded_string = decoded_bytes.decode('utf-8')
             # print(decoded_string)
-            if decoded_string == client_secret:
+            if secret_value == client_secret:
                 print(f"Key Vault '{vault_name}' has the matching secret: '{secret_name}'")
                 matching_secret_found = True
                 break  # Stop the loop when a matching secret is found
@@ -773,9 +776,9 @@ def json_submit_form_azure():
         for key, value in secrets.items():
             # Replace underscores with hyphens in the secret name
             key = key.replace("_", "-")
-            encoded_value = base64.b64encode(value.encode("utf-8")).decode("utf-8")     
-            command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {encoded_value} --output none --query 'value'"
-            # command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {value} --output none --query 'value'"
+           # encoded_value = base64.b64encode(value.encode("utf-8")).decode("utf-8")     
+            #command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {encoded_value} --output none --query 'value'"
+            command = f"az keyvault secret set --vault-name {key_vault_name} --name {key} --value {value} --output none --query 'value'"
  
             try:
                 # Use Azure CLI to set the secret in the Key Vault
@@ -955,7 +958,8 @@ def json_create_aks():
     print("user name is:", user_data["user"])
 
     file_name = f'terraform-{user_data["user"]}.tfvars'
-    
+    file_path = f'azure/template/{file_name}'    
+
     aks_version = float(aks_version)
     
     # Initialize variables for vm_name and vm_pass
@@ -982,7 +986,7 @@ def json_create_aks():
             f.write(f'vm_name = "{vm_name}"\n')
             f.write(f'vm_pass = "{vm_pass}"\n')
 
-    file_path = f'templates/user-data/{file_name}'
+    #file_path = f'templates/user-data/{file_name}'
 
     if vm_name is not None:
         # Include vm_name and vm_pass if vm_name is not None
@@ -1015,7 +1019,7 @@ node_count = "{node_count}"'''
     os.remove(file_name)
     os.remove("user_name.json")
     return json.dumps( {
-            "message": 'pipeline is triggered! You are now able to log in ',
+            "message": 'pipeline is triggered! aks will be created.. ',
             "statusCode": 200
         })
 
@@ -1082,10 +1086,10 @@ def submit_form_gcp():
  
         # Store the entire JSON content as a secret
     secret_name = "your-secret-name"
-    encoded_value = base64.b64encode(secrets_content.encode("utf-8")).decode("utf-8")     
-    command = f"az keyvault secret set --vault-name {key_vault_name} --name {secret_name} --value {encoded_value} --output none --query 'value'"
+    #encoded_value = base64.b64encode(secrets_content.encode("utf-8")).decode("utf-8")     
+    #command = f"az keyvault secret set --vault-name {key_vault_name} --name {secret_name} --value {encoded_value} --output none --query 'value'"
           # Replace with your desired secret name
-    # command = f"az keyvault secret set --vault-name {key_vault_name} --name {secret_name} --value '{secrets_content}' --output none --query 'value'"
+    command = f"az keyvault secret set --vault-name {key_vault_name} --name {secret_name} --value '{secrets_content}' --output none --query 'value'"
     try:
             # Use Azure CLI to set the secret in the Key Vault
             subprocess.check_call(["bash", "-c", f'AZURE_ACCESS_TOKEN="{access_token}" {command}'])
@@ -1123,7 +1127,7 @@ def json_submit_form_gcp():
    #     return jsonify({"message": 'Invalid file type. Please upload a JSON file'}), 400
 
     # Specify the directory where you want to save the JSON file
-    save_directory = './uploads'
+    save_directory = './'
 
     # Save the JSON file with its original filename
     file_path = os.path.join(save_directory, json_file.filename)
@@ -1303,7 +1307,7 @@ def json_create_gke():
         user_data = json.load(file)
 
     file_name = f'terraform-{user_data["user"]}.tfvars'
-    file_path = f'templates/user-data/{file_name}'
+    file_path = f'gcp/template/{file_name}'
 
 
     tf_config = f'''
@@ -1330,7 +1334,7 @@ def json_create_gke():
 
     # You can also redirect the user to a success page if needed
     return json.dumps( {
-            "message": 'gke created Succesfully',
+            "message": 'Pipeline triggered! gke will be created...',
             "statusCode": 200
     })
     #return render_template('success.html')
