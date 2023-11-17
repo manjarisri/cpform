@@ -1,0 +1,6 @@
+project = "None"
+Region = "None"
+gke_name = "None"
+gke_version = "None"
+node_count = "None"
+cluster_type = "None"

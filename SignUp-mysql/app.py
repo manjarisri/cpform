@@ -1,5 +1,5 @@
 
-
+from packaging import version
 from flask import Flask, render_template, url_for, flash, redirect, request
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
@@ -26,10 +26,6 @@ gitlab_url = "https://gitlab.com"
 project_id = "51819357"
 access_token = "glpat-EmyFa2Kj5NCy8gUiu4qG"    
 branch_name = "featurebrach1"
-#project_id = "51066584"
-#access_token = "glpat-G3RiTBsw4oQopnHQi9-x"
-#branch_name = "main"
-
 app = Flask(__name__, static_url_path='/static')
 
 CORS(app) 
@@ -57,7 +53,12 @@ class User(db.Model,UserMixin):
  
     def __repr__(self):
         return f"User('{self.username}', '{self.email}')"
- 
+
+class Data(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(20), nullable=False)
+    cloudname = db.Column(db.String(20), nullable=False)
+    clustername = db.Column(db.String(20), nullable=False)
  
 class todo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -137,16 +138,33 @@ def dashboard():
 @app.route('/cloud')
 def cloud():
     return render_template('cloud.html')
- 
+
+
+@app.route('/cloud_del')
+def cloud_del():
+    return render_template('cloud_del.html')
+
+
+@app.route('/aws_del')
+def aws_del():
+    return render_template('aws_del.html')
+
+
+@app.route('/az_del')
+def az_del():
+    return render_template('az_del.html')
+
+
+@app.route('/gcp_del')
+def gcp_del():
+    return render_template('gcp_del.html')
+
  
 @app.route('/aws')
 def aws():
     return render_template('aws.html')
 
 
-
-
- 
 @app.route('/json_submit_form_aws', methods=['POST'])
 def json_submit_form_aws():
 # Get  AWS form data
@@ -394,10 +412,6 @@ def submit_form_aws():
     with open(secrets_file_path, "w"):         pass
  
     ## ending the script
-    # return json.dumps( {
-    #         "message": 'Credential Succesfully added',
-    #         "statusCode": 200
-    # }) 
     return render_template('./create_aws.html')
 
 @app.route('/aws_form', methods=['GET'])
@@ -410,6 +424,50 @@ def create_aws_form():
  
 @app.route('/success', methods=['GET'])
 def success_aws():
+    return render_template('success.html')
+
+@app.route('/delete_aks', methods=['POST'])
+def delete_aks():
+    
+    aks_name = request.form.get('aks_name')
+    resource_group = request.form.get('resource_group')
+    
+    with open('file.txt', 'w') as f:
+        f.write(f'eks-name = "{aks_name}"\n')
+        f.write(f'resource_group = "{resource_group}"\n')
+        
+    
+    file_path = f'azure-delete/file.txt'
+    tf_config = f''' 
+    aks_name = "{aks_name}"
+    resourse_group = "{resource_group}"
+    '''
+    print("Configuration:", tf_config)
+    print("Uploading tf file to gitlab")
+    upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
+    print("Tf File uploaded successfully")
+    return render_template('success.html')
+@app.route('/delete_eks', methods=['POST'])
+def delete_eks():
+    
+    eks_name = request.form.get('eks_name')
+    Region = request.form.get('Region')
+    Node = request.form.get('ng_name')
+    with open('file.txt', 'w') as f:
+        f.write(f'eks-name = "{eks_name}"\n')
+        f.write(f'region = "{Region}"\n')
+        f.write(f'node = "{Node}"\n')
+    
+    file_path = f'aws-delete/file.txt'
+    tf_config = f''' 
+    eks_name = "{eks_name}"
+    region = "{Region}"
+    node = "{Node}"
+    '''
+    print("Configuration:", tf_config)
+    print("Uploading tf file to gitlab")
+    upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
+    print("Tf File uploaded successfully")
     return render_template('success.html')
 
 
@@ -426,6 +484,9 @@ def json_create_aws():
     min_size = form['min_size']
     cluster_type = form['cluster_type']
     
+    # user = Data(username=user_data["user"], cloudname='aws', clustername=user_data["eks_name"])
+    # db.session.add(user)
+    # db.session.commit()
     eks_version = float(eks_version)
  
     # Create the content for terraform.tfvars
@@ -485,7 +546,8 @@ def create_aws():
     min_size = request.form.get('min_size')
     cluster_type = request.form.get('cluster_type')
     
-    eks_version = float(eks_version)
+    eks_version = str(eks_version)
+    eks_version = version.parse(eks_version)
  
     # Create the content for terraform.tfvars
     with open('terraform.tfvars', 'w') as f:
@@ -502,7 +564,10 @@ def create_aws():
 
     with open(file_name, 'r') as file:
         user_data = json.load(file)
-
+  
+    user = Data(username=user_data["user"], cloudname='aws', clustername=eks_name)
+    db.session.add(user)
+    db.session.commit()
     file_name = f'terraform-{user_data["user"]}.tfvars'
     file_path = f'templates/user-data/{file_name}'
 
@@ -518,7 +583,7 @@ cluster_type = "{cluster_type}"
 '''
     print("Configuration:", tf_config)
 
-    print("Configuration:", tf_config)
+    # print("Configuration:", tf_config)
 
     
     print("Uploading tf file to gitlab")
@@ -849,10 +914,14 @@ def create_aks():
 
 
     print("user name is:", user_data["user"])
-
+    user = Data(username=user_data["user"], cloudname='azure', clustername=user_data["aks_name"])
+    db.session.add(user)
+    db.session.commit()
     file_name = f'terraform-{user_data["user"]}.tfvars'
     
-    aks_version = float(aks_version)
+
+    
+    aks_version = version.parse(aks_version)
     
     # Initialize variables for vm_name and vm_pass
     vm_name = None
@@ -1026,7 +1095,76 @@ node_count = "{node_count}"'''
 @app.route('/gcp')
 def gcp():
     return render_template('gcp.html')
+@app.route('/submit_form_gke', methods=['GET'])
+def create_gcp():
+    # Retrieve form data
+    project = request.form.get('project')
+    Region = request.form.get('Region')
+    gke_name = request.form.get('gke_name')
+    gke_version = request.form.get('gke_version')
+    node_count = request.form.get('node_count')
+    cluster_type = request.form.get('cluster_type')
+    gke_version = str(gke_version)
+    gke_version = version.parse(gke_version)
  
+    # Initialize variables for vm_name and vm_pass
+    vm_name = None
+    vm_pass = None
+ 
+    # Process form data based on Cluster Type
+    if cluster_type == 'Private':
+        vm_name = request.form.get('vm_name')
+        vm_pass = request.form.get('vm_pass')
+ 
+    # Create the content for terraform.tfvars
+    with open('terraform.tfvars', 'w') as f:
+        f.write(f'project = "{project}"\n')
+        f.write(f'Region = "{Region}"\n')
+        f.write(f'gke_name = "{gke_name}"\n')
+        f.write(f'gke_version = "{gke_version}"\n')
+        f.write(f'node_count = "{node_count}"\n')
+        f.write(f'cluster_type = "{cluster_type}"\n')
+        if vm_name is not None:
+            f.write(f'vm_name = "{vm_name}"\n')
+            f.write(f'vm_pass = "{vm_pass}"\n')
+
+    file_name = "./user_name.json"
+
+    with open(file_name, 'r') as file:
+        user_data = json.load(file)
+    user = Data(username=user_data["user"], cloudname='gcp', clustername=gke_name)
+    db.session.add(user)
+    db.session.commit()
+    file_name = f'terraform-{user_data["user"]}.tfvars'
+    file_path = f'templates/user-data/{file_name}'
+
+
+    tf_config = f'''
+    project = "{project}"
+    Region = "{Region}"
+    gke_name = "{gke_name}"
+    gke_version = "{gke_version}"
+    node_count = "{node_count}"
+    cluster_type = "{cluster_type}"
+    vm_name = "{vm_name}"  
+    vm_pass = "{vm_pass}" 
+    '''
+
+
+
+
+    # Print the tf_config (optional)
+    print("Configuration:", tf_config)
+
+    # Upload the tfvars file to GitLab
+    print("Uploading tfvars file to GitLab")
+    upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
+    print("Tfvars File uploaded successfully")
+
+    # You can also redirect the user to a success page if needed
+    
+    return render_template('success.html')
+
 @app.route('/submit_form_gke', methods=['POST'])
 def submit_form_gcp():
     # Check if a file was uploaded
@@ -1085,9 +1223,9 @@ def submit_form_gcp():
  
  
         # Store the entire JSON content as a secret
-    secret_name = "your-secret-name"
-    #encoded_value = base64.b64encode(secrets_content.encode("utf-8")).decode("utf-8")     
-    #command = f"az keyvault secret set --vault-name {key_vault_name} --name {secret_name} --value {encoded_value} --output none --query 'value'"
+    secret_name = "your-secret"
+    # encoded_value = base64.b64encode(secrets_content.encode("utf-8")).decode("utf-8")     
+    # command = f"az keyvault secret set --vault-name {key_vault_name} --name {secret_name} --value '{encoded_value}' --output none --query 'value'"
           # Replace with your desired secret name
     command = f"az keyvault secret set --vault-name {key_vault_name} --name {secret_name} --value '{secrets_content}' --output none --query 'value'"
     try:
@@ -1236,7 +1374,9 @@ def create_gke():
 
     with open(file_name, 'r') as file:
         user_data = json.load(file)
-
+    user = Data(username=user_data["user"], cloudname='gcp', clustername=gke_name)
+    db.session.add(user)
+    db.session.commit()
     file_name = f'terraform-{user_data["user"]}.tfvars'
     file_path = f'templates/user-data/{file_name}'
 
@@ -1505,4 +1645,4 @@ def delete(id):
  
  
 if __name__ == '__main__':
-    app.run(debug=True,host='0.0.0.0',port=4000)
+    app.run(debug=True,host='0.0.0.0',port=4440)
