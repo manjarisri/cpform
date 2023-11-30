@@ -1,5 +1,4 @@
 
-
 from packaging import version
 from flask import Flask, render_template, url_for, flash, redirect, request
 from datetime import datetime
@@ -36,7 +35,7 @@ app.config['SECRET_KEY'] = '5791628bb0b13ce0c676dfde280ba245'
 
 app.config['WTF_CSRF_ENABLED'] = False
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://admin:cockpitpro@cockpit.cuhfaiap2mux.us-east-1.rds.amazonaws.com:3306/cockpit'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://admin:cockpitpro@cockpit-pro.cdcxjmndyjyl.ap-southeast-2.rds.amazonaws.com:3306/cockpit'
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
@@ -330,7 +329,6 @@ def submit_form_aws():
  
     # Write AWS form data to terraform.vars file
     with open('terraform.tfvars', 'w') as f:
-        f.write(f'Username = "{User_name}"\n')
         f.write(f'Access_key = "{Access_key}"\n')
         f.write(f'secret_Access_key = "{secret_Access_key}"\n')
     
@@ -449,36 +447,6 @@ def delete_aks():
     upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
     print("Tf File uploaded successfully")
     return render_template('success.html')
-
-@app.route('/json_delete_aks', methods=['POST'])
-def json_delete_aks():
-    try:
-       aks_name = request.form.get('aks_name')
-       resource_group = request.form.get('resource_group')
-    
-       with open('file.txt', 'w') as f:
-         f.write(f'aks-name = "{aks_name}"\n')
-         f.write(f'resource_group = "{resource_group}"\n')
-
-       file_path = f'azure-delete/file.txt'
-       tf_config = f''' 
-       aks_name = "{aks_name}"
-       resourse_group = "{resource_group}"
-       '''
-       print("Configuration:", tf_config)
-       print("Uploading tf file to gitlab")
-       upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
-       print("Tf File uploaded successfully")
-
-       response_data = {'status': 'success', 'message': 'Delete request triggered the pipeline please wait sometime...'}
-       return jsonify(response_data),202
-
-    except Exception as e:
-        error_message = f"An error occurred: {str(e)}"
-        response_data = {'status': 'error', 'message': error_message}
-        return jsonify(response_data),404
-
-
 @app.route('/delete_gke', methods=['POST'])
 def delete_gke():
     gke_name = request.form.get('gke_name')
@@ -499,40 +467,6 @@ def delete_gke():
     upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
     print("Tf File uploaded successfully")
     return render_template('success.html')
-
-@app.route('/json_delete_gke', methods=['POST'])
-def json_delete_gke():
-  try:
-    gke_name = request.form.get('gke_name')
-    region = request.form.get('region')
-    project_id = request.form.get('project_id')
-
-    with open('file.txt', 'w') as f:
-        f.write(f'gke-name = "{gke_name}"\n')
-        f.write(f'region = "{region}"\n')
-        f.write(f'project_id = "{project_id}"\n')
-
-    file_path = f'gke-delete/file.txt'
-    tf_config = f''' 
-    gke_name = "{gke_name}"
-    region = "{region}"
-    project_id = "{project_id}"
-    '''
-    print("Configuration:", tf_config)
-    print("Uploading tf file to gitlab")
-    upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
-    print("Tf File uploaded successfully")
-    response_data = {'status': 'success', 'message': 'Delete request triggered the pipeline please wait sometime...'}
-    return jsonify(response_data),202
-
-  except Exception as e:
-        error_message = f"An error occurred: {str(e)}"
-        response_data = {'status': 'error', 'message': error_message}
-        return jsonify(response_data),404
-
-
-
-
 @app.route('/delete_eks', methods=['POST'])
 def delete_eks():
     
@@ -559,10 +493,9 @@ def delete_eks():
 @app.route('/json_delete_eks', methods=['POST'])
 def json_delete_eks():
     try:
-        form = request.get_json()
-        eks_name = form['eks_name']
-        region = form['region']
-        node = form['node']
+        eks_name = request.form.get('eks_name')
+        region = request.form.get('Region')
+        node = request.form.get('ng_name')
 
         with open('file.txt', 'w') as f:
             f.write(f'eks-name = "{eks_name}"\n')
@@ -581,19 +514,18 @@ def json_delete_eks():
         print("Tf File uploaded successfully")
 
         # Return JSON response
-        response_data = {'status': 'success', 'message': 'Delete request triggered the pipeline please wait sometime...'}
-        return jsonify(response_data),202
+        response_data = {'status': 'success', 'message': 'EKS deletion i'}
+        return jsonify(response_data)
 
     except Exception as e:
         error_message = f"An error occurred: {str(e)}"
         response_data = {'status': 'error', 'message': error_message}
-        return jsonify(response_data),404
-
+        return jsonify(response_data)
 @app.route('/json_create_aws', methods=['POST'])
 def json_create_aws():
     # Retrieve form data
     form = request.get_json()
-    eks_name = form['cluster_name']
+    eks_name = form['eks_name']
     Region = form['region']
     instance_type = form['instance_type']
     eks_version = form['eks_version']
@@ -627,8 +559,8 @@ def json_create_aws():
     file_path = f'aws/templates/{file_name}'
 
     tf_config = f'''
-cluster_name = "{eks_name}"
-region = "{Region}"
+eks_name = "{eks_name}"
+Region = "{Region}"
 instance_type = "{instance_type}"
 eks_version = "{eks_version}"
 desired_size = "{desired_size}"
@@ -655,8 +587,8 @@ cluster_type = "{cluster_type}"
 @app.route('/create_aws', methods=['POST'])
 def create_aws():
     # Retrieve form data
-    eks_name = request.form.get('cluster_name')
-    Region = request.form.get('region')
+    eks_name = request.form.get('eks_name')
+    Region = request.form.get('Region')
     instance_type = request.form.get('instance_type')
     eks_version = request.form.get('eks_version')
     desired_size = request.form.get('desired_size')
@@ -687,11 +619,11 @@ def create_aws():
     db.session.add(user)
     db.session.commit()
     file_name = f'terraform-{user_data["user"]}.tfvars'
-    file_path = f'aws/templates/{file_name}'
+    file_path = f'templates/user-data/{file_name}'
 
     tf_config = f'''
-cluster_name = "{eks_name}"
-region = "{Region}"
+eks_name = "{eks_name}"
+Region = "{Region}"
 instance_type = "{instance_type}"
 eks_version = "{eks_version}"
 desired_size = "{desired_size}"
@@ -1071,23 +1003,22 @@ def create_aks():
         # Include vm_name and vm_pass if vm_name is not None
         tf_config = f'''
 rg_name = "{resource_group}"
-rg_location = "{Region}"
+region = "{Region}"
 availability_zones = "{availability_zones}"
 aks_name = "{aks_name}"
 aks_version = "{aks_version}"
 node_count = "{node_count}"
-private_cluster_enabled = "{cluster_type}"
 vm_name = "{vm_name}"
 vm_pass = "{vm_pass}"'''
     else:
         tf_config = f'''
 rg_name = "{resource_group}"
-rg_location = "{Region}"
+region = "{Region}"
 availability_zones = "{availability_zones}"
 aks_name = "{aks_name}"
 aks_version = "{aks_version}"
-node_count = "{node_count}"
-private_cluster_enabled = "{cluster_type}"'''   
+node_count = "{node_count}"'''
+   
     print("Configuration:", tf_config)
     
     print("Uploading tf file to gitlab")
@@ -1255,7 +1186,7 @@ def create_gcp():
     db.session.add(user)
     db.session.commit()
     file_name = f'terraform-{user_data["user"]}.tfvars'
-    file_path = f'/gcp/templates/{file_name}'
+    file_path = f'templates/user-data/{file_name}'
 
 
     tf_config = f'''
@@ -1497,7 +1428,7 @@ def create_gke():
     db.session.add(user)
     db.session.commit()
     file_name = f'terraform-{user_data["user"]}.tfvars'
-    file_path = f'/gcp/templates/{file_name}'
+    file_path = f'aws/templates/user-data/{file_name}'
 
 
     tf_config = f'''
@@ -1611,7 +1542,8 @@ def index():
 def about():
     return render_template('about.html', title='About')
  
-@app.route("/register", methods=['GET','POST'])
+ 
+@app.route("/register", methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('home'))
@@ -1623,10 +1555,17 @@ def register():
         db.session.add(user)
         db.session.commit()
 
-        
-        flash('Your account has been created! You are now able to log in', 'success')
-        return redirect(url_for('login'))
-    return render_template('register.html', title='Register', form=form)
+        return json.dumps( {
+            "message": 'Your account has been created! You are now able to log in ',
+            "statusCode": 200
+        }), 200
+   #     flash('Your account has been created! You are now able to log in', 'success')
+    #    return redirect(url_for('login'))
+    #return render_template('register.html', title='Register', form=form)
+    return json.dumps({
+	   "message": 'Invalid or not mathced with defined expression',
+	   "statusCode": 401
+	}), 401
 
 @app.route("/jsonRegister", methods=['POST'])
 def josnRegister():

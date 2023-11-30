@@ -29,3 +29,5 @@ azure-mgmt-keyvault
 flask-cors
 
 python-gitlab
+
+packaging-23.2

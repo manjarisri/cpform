@@ -450,33 +450,32 @@ def delete_aks():
     print("Tf File uploaded successfully")
     return render_template('success.html')
 
-@app.route('/json_delete_aks', methods=['POST'])
-def json_delete_aks():
-    try:
-       aks_name = request.form.get('aks_name')
-       resource_group = request.form.get('resource_group')
+@app.route('/delete_aks', methods=['POST'])
+def delete_aks():
     
-       with open('file.txt', 'w') as f:
-         f.write(f'aks-name = "{aks_name}"\n')
-         f.write(f'resource_group = "{resource_group}"\n')
+    aks_name = request.form.get('aks_name')
+    resource_group = request.form.get('resource_group')
+    
+    with open('file.txt', 'w') as f:
+        f.write(f'eks-name = "{aks_name}"\n')
+        f.write(f'resource_group = "{resource_group}"\n')
 
-       file_path = f'azure-delete/file.txt'
-       tf_config = f''' 
-       aks_name = "{aks_name}"
-       resourse_group = "{resource_group}"
-       '''
-       print("Configuration:", tf_config)
-       print("Uploading tf file to gitlab")
-       upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
-       print("Tf File uploaded successfully")
+    file_path = f'azure-delete/file.txt'
+    tf_config = f''' 
+    aks_name = "{aks_name}"
+    resourse_group = "{resource_group}"
+    '''
+    print("Configuration:", tf_config)
+    print("Uploading tf file to gitlab")
+    upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
+    print("Tf File uploaded successfully")
 
-       response_data = {'status': 'success', 'message': 'Delete request triggered the pipeline please wait sometime...'}
-       return jsonify(response_data),202
+    # Return JSON response using jsonify
+    return jsonify({"message": "Tf File uploaded successfully"})
 
-    except Exception as e:
-        error_message = f"An error occurred: {str(e)}"
-        response_data = {'status': 'error', 'message': error_message}
-        return jsonify(response_data),404
+
+
+
 
 
 @app.route('/delete_gke', methods=['POST'])
@@ -499,39 +498,6 @@ def delete_gke():
     upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
     print("Tf File uploaded successfully")
     return render_template('success.html')
-
-@app.route('/json_delete_gke', methods=['POST'])
-def json_delete_gke():
-  try:
-    gke_name = request.form.get('gke_name')
-    region = request.form.get('region')
-    project_id = request.form.get('project_id')
-
-    with open('file.txt', 'w') as f:
-        f.write(f'gke-name = "{gke_name}"\n')
-        f.write(f'region = "{region}"\n')
-        f.write(f'project_id = "{project_id}"\n')
-
-    file_path = f'gke-delete/file.txt'
-    tf_config = f''' 
-    gke_name = "{gke_name}"
-    region = "{region}"
-    project_id = "{project_id}"
-    '''
-    print("Configuration:", tf_config)
-    print("Uploading tf file to gitlab")
-    upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
-    print("Tf File uploaded successfully")
-    response_data = {'status': 'success', 'message': 'Delete request triggered the pipeline please wait sometime...'}
-    return jsonify(response_data),202
-
-  except Exception as e:
-        error_message = f"An error occurred: {str(e)}"
-        response_data = {'status': 'error', 'message': error_message}
-        return jsonify(response_data),404
-
-
-
 
 @app.route('/delete_eks', methods=['POST'])
 def delete_eks():
@@ -587,8 +553,7 @@ def json_delete_eks():
     except Exception as e:
         error_message = f"An error occurred: {str(e)}"
         response_data = {'status': 'error', 'message': error_message}
-        return jsonify(response_data),404
-
+        return jsonify(response_data)
 @app.route('/json_create_aws', methods=['POST'])
 def json_create_aws():
     # Retrieve form data
