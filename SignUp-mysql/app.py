@@ -1,5 +1,3 @@
-
-
 from packaging import version
 from flask import Flask, render_template, url_for, flash, redirect, request
 from datetime import datetime
@@ -21,7 +19,11 @@ from azure.identity import ClientSecretCredential
 from azure.keyvault.secrets import SecretClient
 from azure.mgmt.keyvault import KeyVaultManagementClient
 from flask import Flask, jsonify
+import hcl
+# Your Flask setup code
 
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
 
 gitlab_url = "https://gitlab.com"
 project_id = "51819357"
@@ -126,15 +128,152 @@ def get_authenticated_user_id():
     return username
  
  
-@app.route('/dashboard')
+#@app.route('/dashboard')
+#def dashboard():
+#    if current_user.is_authenticated:
+#        username = current_user.username
+#        return render_template('dashboard.html', username=username)
+#    else:
+#        return redirect(url_for('login'))  # Redirect to login if not authenticated
+ 
+
+
+
+@app.route('/final-dashboard', methods=['GET', 'POST'])
 def dashboard():
     if current_user.is_authenticated:
         username = current_user.username
-        return render_template('dashboard.html', username=username)
+        return render_template('final-dashboard.html', username=username)
     else:
-        return redirect(url_for('login'))  # Redirect to login if not authenticated
- 
- 
+        return redirect(url_for('login'))
+
+@app.route('/dashboard-cloud', methods=['GET', 'POST'])
+def dashboard_cloud():
+    if current_user.is_authenticated:
+        username = current_user.username
+        return render_template('dashboard-cloud.html', username=username)
+    else:
+        return redirect(url_for('login'))
+
+@app.route('/show-details-aws', methods=['GET', 'POST'])
+def show_details_aws():
+    if current_user.is_authenticated:
+        username = current_user.username
+        key_vault_url = "https://aws-final.vault.azure.net/"
+    
+        # Use DefaultAzureCredential to automatically authenticate
+        credential = DefaultAzureCredential()
+
+        # Create a SecretClient using the Key Vault URL
+        secret_client = SecretClient(vault_url=key_vault_url, credential=credential)
+
+        # Retrieve the secrets
+        secret_access_key = secret_client.get_secret("secret-Access-key").value
+        access_key = secret_client.get_secret("Access-key").value
+
+        return render_template('show-details-aws.html', access_key=access_key, secret_access_key=secret_access_key)
+    else:
+        return redirect(url_for('login'))
+
+@app.route('/show-details-azure', methods=['GET', 'POST'])
+def show_details_azure():
+    if current_user.is_authenticated:
+        username = current_user.username
+        key_vault_url = "https://azure-final.vault.azure.net/"
+    
+        # Use DefaultAzureCredential to automatically authenticate
+        credential = DefaultAzureCredential()
+        
+        # Create a SecretClient using the Key Vault URL
+        secret_client = SecretClient(vault_url=key_vault_url, credential=credential)
+
+        # Retrieve the secret containing your Azure credentials
+        secret_id = "client-id"
+        secret_secret = "client-secret"
+        secret_subscription = "subscription-id"
+        secret_tenant = "tenant-id"
+
+        client_id = secret_client.get_secret(secret_id).value
+        client_secret = secret_client.get_secret(secret_secret).value
+        subscription_id = secret_client.get_secret(secret_subscription).value
+        tenant_id = secret_client.get_secret(secret_tenant).value
+        return render_template('show-details-azure.html', username=username, client_id=client_id, client_secret=client_secret, subscription_id=subscription_id, tenant_id=tenant_id)
+        
+    else:
+        return redirect(url_for('login'))
+
+
+
+@app.route('/show-details-gcp', methods=['GET', 'POST'])
+def show_details_gcp():
+    if current_user.is_authenticated:
+        username = current_user.username
+        key_vault_url = "https://gcp-final.vault.azure.net/"
+    
+    # Use DefaultAzureCredential to automatically authenticate
+        credential = DefaultAzureCredential()
+        
+        # Create a SecretClient using the Key Vault URL
+        secret_client = SecretClient(vault_url=key_vault_url, credential=credential)
+
+        # Retrieve the secrets
+        secret_name = "your-secret-name"
+        secret = secret_client.get_secret(secret_name)
+        secret_value = secret.value
+
+        return render_template('show-details-gcp.html', secret_value=secret_value, username=username)
+        
+    else:
+        return redirect(url_for('login'))
+        
+        
+        
+@app.route('/create-cluster', methods=['GET', 'POST'])
+def create_cluster():
+    if current_user.is_authenticated:
+        username = current_user.username
+        return render_template('create-cluster.html', username=username)
+    else:
+        return redirect(url_for('login'))
+
+
+
+@app.route('/my-cluster', methods=['GET', 'POST'])
+def my_cluster():
+    if current_user.is_authenticated:
+        username = current_user.username
+        return render_template('my-cluster.html', username=username)
+    else:
+        return redirect(url_for('login'))
+
+@app.route('/my-cluster-details', methods=['GET', 'POST'])
+def my_cluster_details():
+    if current_user.is_authenticated:
+        username = current_user.username
+        return render_template('my-cluster-details.html', username=username)
+    else:
+        return redirect(url_for('login'))
+
+
+
+@app.route('/cluster-creation-status', methods=['GET', 'POST'])
+def cluster_creation_status():
+    if current_user.is_authenticated:
+        username = current_user.username
+        return render_template('cluster-creation-status.html', username=username)
+    else:
+        return redirect(url_for('login'))
+
+@app.route('/cluster-details', methods=['GET', 'POST'])
+def cluster_details():
+    if current_user.is_authenticated:
+        username = current_user.username
+        return render_template('cluster-details.html', username=username)
+    else:
+        return redirect(url_for('login'))
+
+
+
  
 @app.route('/cloud')
 def cloud():
@@ -1653,23 +1792,22 @@ def josnRegister():
      #      "message": 'Invalid or not mathced with defined expression',
       #     "statusCode": 401
        # }), 401
-@app.route("/login", methods=['GET', 'POST'])
+@app.route("/login", methods=['GET', 'POST'])#
 def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
-        if user and bcrypt.check_password_hash(user.password, form.password.data):
-            login_user(user, remember=form.remember.data)
-            next_page = request.args.get('next')
-            flash('Login successful.', 'success')
-            return redirect(next_page) if next_page else redirect(url_for('dashboard'))
-        else:
+  if current_user.is_authenticated:
+       return redirect(url_for('dashboard'))
+  form = LoginForm()
+  if form.validate_on_submit():
+     user = User.query.filter_by(email=form.email.data).first()
+     if user and bcrypt.check_password_hash(user.password, form.password.data):
+         login_user(user, remember=form.remember.data)
+         next_page = request.args.get('next')
+         flash('Login successful.', 'success')
+         return redirect(next_page) if next_page else redirect(url_for('dashboard'))
+     else:
             flash('Login Unsuccessful. Please check email and password', 'danger')
-    return render_template('login.html', title='Login', form=form)
+  return render_template('login.html', title='Login', form=form)
 
- 
  
 @app.route("/JsonLogin", methods=['POST'])
 def JsonLogin():
@@ -1722,6 +1860,55 @@ def add():
         return redirect(url_for("index"))
         
     return redirect(url_for("index"))
+
+
+@app.route('/eks-output')
+def eks_page():
+    eks_name = "anuj987"
+    region = "US West (N. California)"
+    instance_type = "t3.medium"
+    eks_version = "1.27"
+    desired_size = "2"
+    max_size = "2"
+    min_size = "2"
+    cluster_type = "Private"
+
+    return render_template('eks_page.html', eks_name=eks_name, region=region, instance_type=instance_type,
+                           eks_version=eks_version, desired_size=desired_size, max_size=max_size, min_size=min_size,
+                           cluster_type=cluster_type)
+
+@app.route('/aks-output')
+def aks_page():
+    rg_name = "manjari"
+    region = "East US"
+    availability_zones = "['zone1','zone2']"
+    aks_name = "manjari"
+    aks_version = "1.24"
+    node_count = "1"
+
+    return render_template('aks_page.html', rg_name=rg_name, region=region, availability_zones=availability_zones,
+                           aks_name=aks_name, aks_version=aks_version, node_count=node_count)
+
+@app.route('/gke-output')
+def gke_page():
+    project = "myproject"
+    region = "None"
+    gke_name = "asdf"
+    gke_version = "2.0"
+    node_count = "2"
+    cluster_type = "Public"
+    vm_name = "None"
+    vm_pass = "None"
+
+    return render_template('gke_page.html', project=project, region=region, gke_name=gke_name,
+                           gke_version=gke_version, node_count=node_count, cluster_type=cluster_type,
+                           vm_name=vm_name, vm_pass=vm_pass)
+
+
+
+
+
+
  
  
 @app.route("/complete/<int:id>")

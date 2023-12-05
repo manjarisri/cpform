@@ -31,3 +31,7 @@ flask-cors
 python-gitlab
 
 packaging-23.2
+
+pyhcl
+
+boto3
