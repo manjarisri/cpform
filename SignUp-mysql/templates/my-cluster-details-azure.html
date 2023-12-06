@@ -24,13 +24,13 @@
         </div>
 
        <div class="details">
-        <form id="azureform" action="/my-cluster-details-aws" method="post" onsubmit="return validateForm()">
-            <label for="tenant_id">Enter region:</label>
-            <input type="text" class="form-control" id="tenant_id" name="tenant_id" required>
-               
-        
-            <button type="submit" class="btn btn-custom-light-blue">Submit</button>
-        </form>
+        <h1>Healthy Azure Kubernetes Service Clusters:</h1>
+    <ul>
+        {% for cluster in aks_clusters %}
+            <li>{{ cluster }}</li>
+        {% endfor %}
+    </ul>
+       
         
        </div>
      

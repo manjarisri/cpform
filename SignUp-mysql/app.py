@@ -9,10 +9,16 @@ from wtforms import StringField, PasswordField, SubmitField, BooleanField
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError
 from decouple import config
 from flask_cors import CORS
+from google.cloud import container_v1
+from googleapiclient import discovery
+from google.oauth2 import service_account
+import boto3
+
 import os
 import subprocess
 import random
 import base64
+from azure.mgmt.containerservice import ContainerServiceClient
 from upload_tf_file import upload_file_to_gitlab
 import json
 from azure.identity import ClientSecretCredential
@@ -159,7 +165,7 @@ def dashboard_cloud():
 def show_details_aws():
     if current_user.is_authenticated:
         username = current_user.username
-        key_vault_url = "https://aws-final.vault.azure.net/"
+        key_vault_url = f"https://{username}.vault.azure.net/"
     
         # Use DefaultAzureCredential to automatically authenticate
         credential = DefaultAzureCredential()
@@ -171,7 +177,7 @@ def show_details_aws():
         secret_access_key = secret_client.get_secret("secret-Access-key").value
         access_key = secret_client.get_secret("Access-key").value
 
-        return render_template('show-details-aws.html', access_key=access_key, secret_access_key=secret_access_key)
+        return render_template('show-details-aws.html', access_key=access_key, secret_access_key=secret_access_key, username=username)
     else:
         return redirect(url_for('login'))
 
@@ -179,7 +185,7 @@ def show_details_aws():
 def show_details_azure():
     if current_user.is_authenticated:
         username = current_user.username
-        key_vault_url = "https://azure-final.vault.azure.net/"
+        key_vault_url = f"https://{username}.vault.azure.net/"
     
         # Use DefaultAzureCredential to automatically authenticate
         credential = DefaultAzureCredential()
@@ -208,7 +214,7 @@ def show_details_azure():
 def show_details_gcp():
     if current_user.is_authenticated:
         username = current_user.username
-        key_vault_url = "https://gcp-final.vault.azure.net/"
+        key_vault_url = f"https://{username}.vault.azure.net/"
     
     # Use DefaultAzureCredential to automatically authenticate
         credential = DefaultAzureCredential()
@@ -245,6 +251,46 @@ def my_cluster():
         return render_template('my-cluster.html', username=username)
     else:
         return redirect(url_for('login'))
+@app.route('/my-cluster-details-aws', methods=['GET', 'POST'])
+def my_cluster_details_aws():
+    if current_user.is_authenticated:
+        username = current_user.username
+        # Azure Key Vault details for AWS
+        key_vault_url_aws = "https://aws-final.vault.azure.net/"
+        access_key_secret = "Access-key"
+        secret_access_key_secret = "secret-Access-key"
+
+        # Retrieve credentials from Azure Key Vault
+        credential_aws = DefaultAzureCredential()
+        secret_client_aws = SecretClient(vault_url=key_vault_url_aws, credential=credential_aws)
+
+        # Retrieve the secrets from Key Vault
+        aws_access_key = secret_client_aws.get_secret(access_key_secret).value
+        aws_secret_access_key = secret_client_aws.get_secret(secret_access_key_secret).value
+        regin = request.form.get('tenant_id')
+        # Set up Boto3 client with retrieved credentials and region
+        eks_client = boto3.client(
+            'eks',
+            aws_access_key_id=aws_access_key,
+            aws_secret_access_key=aws_secret_access_key,
+            region_name=regin
+        )
+
+        clusters_data = []
+
+        # List ready or healthy EKS clusters in the specified AWS region
+        try:
+            eks_clusters = eks_client.list_clusters()
+            for cluster_name in eks_clusters['clusters']:
+                cluster_info = eks_client.describe_cluster(name=cluster_name)
+                if cluster_info['cluster']['status'] == 'ACTIVE':
+                    clusters_data.append({"name": cluster_name})
+        except Exception as e:
+            print(f"Error listing ready or healthy clusters in us-east-1: {str(e)}")
+
+        return render_template('my-cluster-details-aws.html', username=username, cluster=clusters_data)
+    else:
+        return redirect(url_for('login'))
 
 @app.route('/my-cluster-details', methods=['GET', 'POST'])
 def my_cluster_details():
@@ -254,6 +300,89 @@ def my_cluster_details():
     else:
         return redirect(url_for('login'))
 
+
+@app.route('/my-cluster-details-azure', methods=['GET', 'POST'])
+def my_cluster_details_azure():
+    if current_user.is_authenticated:
+        username = current_user.username
+        # Azure Key Vault details
+        key_vault_url = f"https://{username}.vault.azure.net/"
+        client_id_secret = "client-id"
+        client_secret_secret = "client-secret"
+        subscription_id_secret = "subscription-id"
+        tenant_id_secret = "tenant-id"
+
+        # Retrieve credentials from Azure Key Vault
+        credential = DefaultAzureCredential()
+
+        # Create a SecretClient using the Key Vault URL
+        secret_client = SecretClient(vault_url=key_vault_url, credential=credential)
+
+        # Retrieve the secrets from Key Vault
+        client_id = secret_client.get_secret(client_id_secret).value
+        client_secret = secret_client.get_secret(client_secret_secret).value
+        subscription_id = secret_client.get_secret(subscription_id_secret).value
+        tenant_id = secret_client.get_secret(tenant_id_secret).value
+
+        # Set up the ContainerServiceClient with retrieved credentials
+        aks_client = ContainerServiceClient(credential, subscription_id)
+
+        # List AKS clusters in the subscription
+        aks_clusters = aks_client.managed_clusters.list()
+        healthy_clusters = [cluster.name for cluster in aks_clusters
+                        if cluster.provisioning_state.lower() == "succeeded"
+                        and cluster.agent_pool_profiles[0].provisioning_state.lower() == "succeeded"]
+        # Print healthy or ready AKS clusters
+        # print("Healthy Azure Kubernetes Service Clusters:")
+        # for aks_cluster in aks_clusters:
+        #     if aks_cluster.provisioning_state.lower() == "succeeded" and aks_cluster.agent_pool_profiles[0].provisioning_state.lower() == "succeeded":
+        #         print(f" - {aks_cluster.name}")
+
+        return render_template('my-cluster-details-azure.html', username=username, aks_clusters=healthy_clusters )
+    else:
+        return redirect(url_for('login'))
+
+@app.route('/my-cluster-details-gcp', methods=['GET', 'POST'])
+def my_cluster_details_gcp():
+    if current_user.is_authenticated:
+        username = current_user.username
+        # Azure Key Vault details for GCP
+        key_vault_url_gcp = f"https://{username}.vault.azure.net/"
+        gcp_credentials_secret = "your-secret-name"  # Update with your actual secret name
+
+        # Retrieve credentials from Azure Key Vault
+        credential_gcp = DefaultAzureCredential()
+        secret_client_gcp = SecretClient(vault_url=key_vault_url_gcp, credential=credential_gcp)
+
+        # Retrieve the GCP credentials JSON from Key Vault
+        try:
+            gcp_credentials_json = secret_client_gcp.get_secret(gcp_credentials_secret).value
+
+            # Parse the JSON string into a dictionary
+            gcp_credentials_dict = json.loads(gcp_credentials_json)
+
+            # Use the parsed dictionary to create a service account credentials object
+            gcp_credentials = service_account.Credentials.from_service_account_info(gcp_credentials_dict)
+        except Exception as e:
+            print(f"Error retrieving or parsing GCP credentials: {e}")
+
+        # Use the service account credentials for the discovery build
+        service = discovery.build('container', 'v1', credentials=gcp_credentials)
+        gcp_projects = ['golden-plateau-401906']
+
+        # List to store GKE clusters data
+        clusters_data = []
+
+        for project in gcp_projects:
+            request = service.projects().locations().clusters().list(parent=f"projects/{project}/locations/-")
+            response = request.execute()
+
+            if 'clusters' in response:
+                for cluster in response['clusters']:
+                    clusters_data.append({project})
+        return render_template('my-cluster-details-gcp.html', username=username, clusters_data=clusters_data)
+    else:
+        return redirect(url_for('login'))
 
 
 @app.route('/cluster-creation-status', methods=['GET', 'POST'])
@@ -269,6 +398,23 @@ def cluster_details():
     if current_user.is_authenticated:
         username = current_user.username
         return render_template('cluster-details.html', username=username)
+    else:
+        return redirect(url_for('login'))
+
+       
+@app.route('/cluster-details-azure', methods=['GET', 'POST'])
+def cluster_details_azure():
+    if current_user.is_authenticated:
+        username = current_user.username
+        return render_template('cluster-details-azure.html', username=username)
+    else:
+        return redirect(url_for('login'))
+
+@app.route('/cluster-details-gcp', methods=['GET', 'POST'])
+def cluster_details_gcp():
+    if current_user.is_authenticated:
+        username = current_user.username
+        return render_template('cluster-details-gcp.html', username=username)
     else:
         return redirect(url_for('login'))
 
