@@ -23,22 +23,20 @@
 
         </div>
 
-        <div class="cluster-details">
-            <h1>Job IDs for User "jini" and Job Name "aws_infrastructure"</h1>
-        <ul>
-            {% for job_id in job_ids %}
-                <li>{{ job_id }}</li>
-            {% endfor %}
-        </ul>
-        <form id="azureform" action="/logs-aws" method="post" onsubmit="return validateForm()">
-            <label for="job-id">Enter job-id:</label>
-            <input type="text" class="form-control" id="job-id" name="job-id" required>
-               
-        
-            <button type="submit" class="btn btn-custom-light-blue">Submit</button>
-           </div>
-        
+       <div class="cluster-details">
+        <h1>Job IDs for User "jini" and Job Name "azure_infrastructure"</h1>
+    <ul>
+        {% for job_id in job_ids %}
+            <li>{{ job_id }}</li>
+        {% endfor %}
+    </ul>
+    <form id="azureform" action="/logs-azure" method="post" onsubmit="return validateForm()">
+        <label for="job-id">Enter job-id:</label>
+        <input type="text" class="form-control" id="job-id" name="job-id" required>
+           
+    
+        <button type="submit" class="btn btn-custom-light-blue">Submit</button>
+       </div>
      
 </body>
 </html>
- 

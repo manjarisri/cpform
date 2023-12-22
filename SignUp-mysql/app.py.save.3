@@ -1,9 +1,5 @@
-
-import boto3
-import traceback
-from packaging import version
+Wfrom packaging import version
 from flask import Flask, render_template, url_for, flash, redirect, request
-import requests
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
@@ -16,7 +12,6 @@ from flask_cors import CORS
 from google.cloud import container_v1
 from googleapiclient import discovery
 from google.oauth2 import service_account
-import mysql.connector
 import os
 import subprocess
 import random
@@ -30,27 +25,20 @@ from azure.mgmt.keyvault import KeyVaultManagementClient
 from flask import Flask, jsonify
 import hcl
 # Your Flask setup code
-import re 
+import boto3
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
-
+import traceback
 gitlab_url = "https://gitlab.com"
 project_id = "51819357"
-access_token = "glpat-F_rqbsXAufc1wbeoh-zn"    
+access_token = "glpat-EmyFa2Kj5NCy8gUiu4qG"    
 branch_name = "featurebrach1"
 app = Flask(__name__, static_url_path='/static')
 
 CORS(app) 
 
 app.config['SECRET_KEY'] = '5791628bb0b13ce0c676dfde280ba245'
-# db_config = {
-#     'host': 'mysql-service',
-#     'user': 'root',
-#     'port': 3306,
-#     'password': 'cockpitpro',
-#     'database': 'jobinfo',
-# }
-
+ 
 app.config['WTF_CSRF_ENABLED'] = False
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://admin:cockpitpro@cockpit-database.c3xcuwqpwvp4.ap-south-1.rds.amazonaws.com:3306/cockpit'
@@ -155,18 +143,9 @@ def get_authenticated_user_id():
 #        return render_template('dashboard.html', username=username)
 #    else:
 #        return redirect(url_for('login'))  # Redirect to login if not authenticated
+ 
 
-@app.route('/connect-to-cluster-gcp')
-def connect_to_cluster_gcp():
-    return render_template('connect-to-cluster-gcp.html') 
 
-@app.route('/connect-to-cluster-aws')
-def connect_to_cluster_aws():
-    return render_template('connect-to-cluster-aws.html')
-
-@app.route('/connect-to-cluster-az')
-def connect_to_cluster_az():
-    return render_template('connect-to-cluster-az.html')
 
 @app.route('/final-dashboard', methods=['GET', 'POST'])
 def dashboard():
@@ -214,30 +193,29 @@ export_azure_credentials()
 
 @app.route('/json-show-details-aws', methods=['POST'])
 def json_show_details_aws():
-        form = request.get_json()
-        username =form['username']
-        name = username+"aws"
-        key_vault_url = f"https://{name}.vault.azure.net/"
-    
-        # Use DefaultAzureCredential to automatically authenticate
-        credential = DefaultAzureCredential()
+            form = request.get_json()
+            username=form['username']
+            name = username + "aws"
+            key_vault_url = f"https://{name}.vault.azure.net/"
 
-        # Create a SecretClient using the Key Vault URL
-        secret_client = SecretClient(vault_url=key_vault_url, credential=credential)
+            # Use DefaultAzureCredential to automatically authenticate
+            credential = DefaultAzureCredential()
 
-        # Retrieve the secrets
-        secret_access_key = secret_client.get_secret("secret-Access-key").value
-        access_key = secret_client.get_secret("Access-key").value
+            # Create a SecretClient using the Key Vault URL
+            secret_client = SecretClient(vault_url=key_vault_url, credential=credential)
 
-        # Return JSON response
-        response_data = {
-            "access_key": access_key,
-            "secret_access_key": secret_access_key,
-            "username": username
-        }
+            # Retrieve the secrets
+            secret_access_key = secret_client.get_secret("secret-Access-key").value
+            access_key = secret_client.get_secret("Access-key").value
 
-        return jsonify(response_data),200
+            response_data = {
+                'access_key': access_key,
+                'secret_access_key': secret_access_key,
+                'username': username
+            }
 
+            return jsonify(response_data),200
+       
 @app.route('/show-details-azure', methods=['GET', 'POST'])
 def show_details_azure():
     if current_user.is_authenticated:
@@ -267,10 +245,10 @@ def show_details_azure():
         return redirect(url_for('login'))
 
 
-@app.route('/json-show-details-azure', methods=['POST'])
+@app.route('/json-show-details-azure', methods=['GET', 'POST'])
 def json_show_details_azure():
-        form = request.get_json()
-        username =form['username']
+    if current_user.is_authenticated:
+        username = current_user.username
         name = username+"azure"
         key_vault_url = f"https://{name}.vault.azure.net/"
     
@@ -301,6 +279,9 @@ def json_show_details_azure():
         }
 
         return jsonify(response_data), 200
+    else:
+        return jsonify({"error": "no secrets found"}), 401
+
 
 @app.route('/show-details-gcp', methods=['GET', 'POST'])
 def show_details_gcp():
@@ -325,10 +306,10 @@ def show_details_gcp():
     else:
         return redirect(url_for('login'))
         
-@app.route('/json-show-details-gcp', methods=['POST'])
+@app.route('/json-show-details-gcp', methods=['GET', 'POST'])
 def json_show_details_gcp():
-        form = request.get_json()
-        username =form['username']
+    if current_user.is_authenticated:
+        username = current_user.username
         name = username+"gcp"
         key_vault_url = f"https://{name}.vault.azure.net/"
     
@@ -351,6 +332,11 @@ def json_show_details_gcp():
 
         return jsonify(response_data), 200
         
+    else:
+        return jsonify({"error": "no secrets found"}), 401
+
+
+
 
 @app.route('/create-cluster', methods=['GET', 'POST'])
 def create_cluster():
@@ -369,7 +355,6 @@ def my_cluster():
         return render_template('my-cluster.html', username=username)
     else:
         return redirect(url_for('login'))
-
 @app.route('/my-cluster-details-aws', methods=['GET', 'POST'])
 def my_cluster_details_aws():
     if current_user.is_authenticated:
@@ -425,43 +410,39 @@ def my_cluster_details_aws():
     else:
         return redirect(url_for('login'))
 
-@app.route('/json-my-cluster-details-aws', methods=['POST'])
+
+
+@app.route('/json-my-cluster-details-aws', methods=['GET','POST'])
 def json_my_cluster_details_aws():
-        form = request.get_json()
-        username = form['username']
-
+    if current_user.is_authenticated:
         # Azure Key Vault details for AWS
-        name = username + "aws"
-
-        # Format the Key Vault URL
-        key_vault_url_aws = f"https://{name}.vault.azure.net/"
-
-        # Secret names
+        username = current_user.username
+        # Azure Key Vault details for AWS
+        name = username+"aws"
+        key_vault_url_aws = "https://{name}.vault.azure.net/"
         access_key_secret = "Access-key"
         secret_access_key_secret = "secret-Access-key"
 
+        # Retrieve credentials from Azure Key Vault
+        credential_aws = DefaultAzureCredential()
+        secret_client_aws = SecretClient(vault_url=key_vault_url_aws, credential=credential_aws)
+
+        # Retrieve the secrets from Key Vault
+        aws_access_key = secret_client_aws.get_secret(access_key_secret).value
+        aws_secret_access_key = secret_client_aws.get_secret(secret_access_key_secret).value
+        region = request.form.get('region')  # Assuming 'region' is the name attribute of the input field
+
+        # Set up Boto3 client with retrieved credentials and region
+        eks_client = boto3.client(
+            'eks',
+            aws_access_key_id=aws_access_key,
+            aws_secret_access_key=aws_secret_access_key,
+            region_name="us-east-1"
+        )
+
+        clusters_data = []
+
         try:
-            # Retrieve credentials from Azure Key Vault
-            credential_aws = DefaultAzureCredential()
-            secret_client_aws = SecretClient(vault_url=key_vault_url_aws, credential=credential_aws)
-
-            # Retrieve the secrets from Key Vault
-            aws_access_key = secret_client_aws.get_secret(access_key_secret).value
-            aws_secret_access_key = secret_client_aws.get_secret(secret_access_key_secret).value
-
-            # Get AWS region from the form data
-            region = request.form.get('tenant_id')
-
-            # Set up Boto3 client with retrieved credentials and region
-            eks_client = boto3.client(
-                'eks',
-                aws_access_key_id=aws_access_key,
-                aws_secret_access_key=aws_secret_access_key,
-                region_name='us-east-1'
-            )
-
-            clusters_data = []
-
             # List ready or healthy EKS clusters in the specified AWS region
             eks_clusters = eks_client.list_clusters()
             for cluster_name in eks_clusters['clusters']:
@@ -469,14 +450,17 @@ def json_my_cluster_details_aws():
                 if cluster_info['cluster']['status'] == 'ACTIVE':
                     clusters_data.append({"name": cluster_name})
 
-            return jsonify({"username": username, "clusters": clusters_data}),200
-        except Exception as e:
-            # Print error details and traceback
-            print(f"Error in my_cluster_details_aws: {str(e)}")
-            traceback.print_exc()
+            # Return the clusters_data as JSON response
+            return jsonify({"clusters": clusters_data}),200
 
-            # Return an error response or redirect as needed
-            return jsonify({"error_message": "An error occurred. Please try again later."}),404
+        except Exception as e:
+            error_message = f"Error listing ready or healthy clusters in {region}: {str(e)}"
+            return jsonify({"error": error_message}), 500  # Return error message with status code 500
+
+    else:
+        return jsonify({"error": "cluster not found"}), 401 
+
+
 
 
 @app.route('/my-cluster-details', methods=['GET', 'POST'])
@@ -486,14 +470,6 @@ def my_cluster_details():
         return render_template('my-cluster-details.html', username=username)
     else:
         return redirect(url_for('login'))
-
-
-
-        # Print healthy or ready AKS clusters
-        # print("Healthy Azure Kubernetes Service Clusters:")
-        # for aks_cluster in aks_clusters:
-        #     if aks_cluster.provisioning_state.lower() == "succeeded" and aks_cluster.agent_pool_profiles[0].provisioning_state.lower() == "succeeded":
-        #         print(f" - {aks_cluster.name}")
 
 @app.route('/my-cluster-details-azure', methods=['GET', 'POST'])
 def my_cluster_details_azure():
@@ -526,94 +502,62 @@ def my_cluster_details_azure():
     else:
         return redirect(url_for('login'))
 
+        # List AKS clusters in the subscripti
+        # Print healthy or ready AKS clusters
+        # print("Healthy Azure Kubernetes Service Clusters:")
+        # for aks_cluster in aks_clusters:
+        #     if aks_cluster.provisioning_state.lower() == "succeeded" and aks_cluster.agent_pool_profiles[0].provisioning_state.lower() == "succeeded":
 
-@app.route('/json-my-cluster-details-azure', methods=['POST'])
+@app.route('/json-my-cluster-details-azure', methods=['GET', 'POST'])
 def json_my_cluster_details_azure():
-        form = request.get_json()
-        username = form['username']
-        name = username + "azure"
-        key_vault_url = f"https://{name}.vault.azure.net/"
-        secrets = ["client-id", "client-secret", "subscription-id", "tenant-id"]
-
-        try:
-            # Retrieve credentials from Azure Key Vault
-            credential = DefaultAzureCredential()
-            # Create a SecretClient using the Key Vault URL
-            secret_client = SecretClient(vault_url=key_vault_url, credential=credential)
-
-            # Retrieve the secrets from Key Vault
-            secrets_values = {secret: secret_client.get_secret(secret).value for secret in secrets}
-
-            # Set up the ContainerServiceClient with retrieved credentials
-            aks_client = ContainerServiceClient(credential, secrets_values["subscription-id"])
-
-            # Your logic to list Azure Kubernetes Service Clusters here
-            aks_clusters = [cluster.name for cluster in aks_client.managed_clusters.list()]
-
-            # Handle the exception appropriately, e.g., return an error page
-            return jsonify({"username":username, "aks_cluster": aks_clusters}), 200
-        except Exception as e:
-            print(f"Error: {str(e)}")
-
-   
-
-from flask import jsonify
-
-@app.route('/json-my-cluster-details-gcp', methods=['POST'])
-def json_my_cluster_details_gcp():
-    # if current_user.is_authenticated:
-      
-        form = request.get_json()
-        username = form['username']
-        name = username + "gcp"
-
-            # Azure Key Vault details for GCP
-        key_vault_url_gcp = f"https://{name}.vault.azure.net/"
-        gcp_credentials_secret = "your-secret-name"  # Update with your actual secret name
-        try:
-            # Retrieve credentials from Azure Key Vault
-                credential_gcp = DefaultAzureCredential()
-                secret_client_gcp = SecretClient(vault_url=key_vault_url_gcp, credential=credential_gcp)
-
-                    # Retrieve the GCP credentials JSON from Key Vault
-                gcp_credentials_json = secret_client_gcp.get_secret(gcp_credentials_secret).value
-
-                    # Parse the JSON string into a dictionary
-                gcp_credentials_dict = json.loads(gcp_credentials_json)
-
-                    # Use the parsed dictionary to create a service account credentials object
-                gcp_credentials = service_account.Credentials.from_service_account_info(gcp_credentials_dict)
-                # except Exception as e:
-                #     print(f"Error retrieving or parsing GCP credentials: {e}")
-                    # Use the service account credentials for the discovery build
-                service = discovery.build('container', 'v1', credentials=gcp_credentials)
-                gcp_projects = ['golden-plateau-401906']
-
-                    # List to store GKE clusters data
-                clusters_data = []
-
-                for project in gcp_projects:
-                    requests = service.projects().locations().clusters().list(parent=f"projects/{project}/locations/-")
-                    response = requests.execute()
-
-                    if 'clusters' in response:
-                        for cluster in response['clusters']:
-                            clusters_data.append({cluster['name']})
-
-                    # Return JSON response
-                return jsonify({"username": username, "clusters_data": clusters_data}), 200
-        except Exception as e:
-            print(f"Error: {str(e)}")
-            return jsonify({"error_message": "cluster not found"}),200
-
-
-@app.route('/my-cluster-details-gcp', methods=['GET', 'POST'])
-def my_cluster_details_gcp():
     if current_user.is_authenticated:
         username = current_user.username
-        name = username +"gcp"
+        name = username+"azure"
+        key_vault_url = "https://{name}.vault.azure.net/"
+        # Azure Key Vault details
+        #key_vault_url = f"https://{username}.vault.azure.net/"
+        client_id_secret = "client-id"
+        client_secret_secret = "client-secret"
+        subscription_id_secret = "subscription-id"
+        tenant_id_secret = "tenant-id"
+
+        # Retrieve credentials from Azure Key Vault
+        credential = DefaultAzureCredential()
+
+        # Create a SecretClient using the Key Vault URL
+        secret_client = SecretClient(vault_url=key_vault_url, credential=credential)
+
+        # Retrieve the secrets from Key Vault
+        client_id = secret_client.get_secret(client_id_secret).value
+        client_secret = secret_client.get_secret(client_secret_secret).value
+        subscription_id = secret_client.get_secret(subscription_id_secret).value
+        tenant_id = secret_client.get_secret(tenant_id_secret).value
+
+        # Set up the ContainerServiceClient with retrieved credentials
+        aks_client = ContainerServiceClient(credential, subscription_id)
+
+        # List AKS clusters in the subscription
+        aks_clusters = aks_client.managed_clusters.list()
+        healthy_clusters = [cluster.name for cluster in aks_clusters
+                            if cluster.provisioning_state.lower() == "succeeded"
+                            and cluster.agent_pool_profiles[0].provisioning_state.lower() == "succeeded"]
+
+        # Return the list of healthy AKS clusters as JSON response
+        return jsonify({"username": username, "aks_clusters": healthy_clusters}), 200
+
+    else:
+        return jsonify({"error": "cluster not found"}), 401 
+    
+
+
+@app.route('/json-my-cluster-details-gcp', methods=['GET', 'POST'])
+def json_my_cluster_details_gcp():
+    if current_user.is_authenticated:
+        username = current_user.username
+        name = username+"gcp"
+        key_vault_url_gcp = "https://{name}.vault.azure.net/"
         # Azure Key Vault details for GCP
-        key_vault_url_gcp = f"https://{name}.vault.azure.net/"
+    #    key_vault_url_gcp = f"https://{username}.vault.azure.net/"
         gcp_credentials_secret = "your-secret-name"  # Update with your actual secret name
 
         # Retrieve credentials from Azure Key Vault
@@ -621,14 +565,16 @@ def my_cluster_details_gcp():
         secret_client_gcp = SecretClient(vault_url=key_vault_url_gcp, credential=credential_gcp)
 
         # Retrieve the GCP credentials JSON from Key Vault
-        gcp_credentials_json = secret_client_gcp.get_secret(gcp_credentials_secret).value
+        try:
+            gcp_credentials_json = secret_client_gcp.get_secret(gcp_credentials_secret).value
 
             # Parse the JSON string into a dictionary
-        gcp_credentials_dict = json.loads(gcp_credentials_json)
+            gcp_credentials_dict = json.loads(gcp_credentials_json)
 
             # Use the parsed dictionary to create a service account credentials object
-        gcp_credentials = service_account.Credentials.from_service_account_info(gcp_credentials_dict)
-        
+            gcp_credentials = service_account.Credentials.from_service_account_info(gcp_credentials_dict)
+        except Exception as e:
+            print(f"Error retrieving or parsing GCP credentials: {e}")
 
         # Use the service account credentials for the discovery build
         service = discovery.build('container', 'v1', credentials=gcp_credentials)
@@ -643,11 +589,59 @@ def my_cluster_details_gcp():
 
             if 'clusters' in response:
                 for cluster in response['clusters']:
-                    clusters_data.append({cluster['name']})
+                    clusters_data.append({project})
+        
+        # Return the list of GKE clusters data as a JSON response
+        return jsonify({"username": username, "clusters_data": clusters_data}), 200
+    else:
+        return jsonify({"error": "cluster not found"}), 401 
+
+
+
+
+@app.route('/my-cluster-details-gcp', methods=['GET', 'POST'])
+def my_cluster_details_gcp():
+    if current_user.is_authenticated:
+        username = current_user.username
+        name = username+"gcp"
+        key_vault_url_gcp = f"https://{name}.vault.azure.net/"   
+   # Azure Key Vault details for GCP
+       # key_vault_url_gcp = f"https://{username}.vault.azure.net/"
+        gcp_credentials_secret = "your-secret-name"  # Update with your actual secret name
+
+        # Retrieve credentials from Azure Key Vault
+        credential_gcp = DefaultAzureCredential()
+        secret_client_gcp = SecretClient(vault_url=key_vault_url_gcp, credential=credential_gcp)
+
+        # Retrieve the GCP credentials JSON from Key Vault
+        # try:
+        gcp_credentials_json = secret_client_gcp.get_secret(gcp_credentials_secret).value
+
+            # Parse the JSON string into a dictionary
+        gcp_credentials_dict = json.loads(gcp_credentials_json)
+
+            # Use the parsed dictionary to create a service account credentials object
+        gcp_credentials = service_account.Credentials.from_service_account_info(gcp_credentials_dict)
+        # except Exception as e:
+        #     print(f"Error retrieving or parsing GCP credentials: {e}")
+
+        # Use the service account credentials for the discovery build
+        service = discovery.build('container', 'v1', credentials=gcp_credentials)
+        gcp_projects = ['golden-plateau-401906']
+
+        # List to store GKE clusters data
+        clusters_data = []
+
+        for project in gcp_projects:
+            request = service.projects().locations().clusters().list(parent=f"projects/{project}/locations/-")
+            response = request.execute()
+
+            if 'clusters' in response:
+                for cluster in response['clusters']:
+                    clusters_data.append({project})
         return render_template('my-cluster-details-gcp.html', username=username, clusters_data=clusters_data)
     else:
         return redirect(url_for('login'))
-
 @app.route('/cluster-creation-status', methods=['GET', 'POST'])
 def cluster_creation_status():
     if current_user.is_authenticated:
@@ -656,379 +650,34 @@ def cluster_creation_status():
     else:
         return redirect(url_for('login'))
 
-@app.route('/creation-status-aws', methods=['GET', 'POST'])
-def creation_status_aws():
+@app.route('/cluster-details', methods=['GET', 'POST'])
+def cluster_details():
     if current_user.is_authenticated:
         username = current_user.username
-        job_name = 'aws_infrastructure'
-
-        db_config = {
-            'host': '4.157.122.28',
-            'port': 3306,
-            'user': 'root',
-            'password': 'cockpitpro',
-            'database': 'jobinfo'
-        }
-
-        connection = mysql.connector.connect(**db_config)
-        cursor = connection.cursor()
-
-        # Fetch job IDs for username 'jini' and job_name 'azure_infrastructure'
-        query = f"SELECT job_id FROM users WHERE username = '{username}' AND job_name = '{job_name}'"
-        cursor.execute(query)
-        job_ids = [result[0] for result in cursor.fetchall()]
-
-        # Close the database connection
-        cursor.close()
-        connection.close()
-
-        return render_template('cluster-details.html', username=username, job_ids=job_ids)
+        return render_template('cluster-details.html', username=username)
     else:
         return redirect(url_for('login'))
 
-@app.route('/json-creation-status-aws', methods=['POST'])
-def json_creation_status_aws():
-        form = request.get_json()
-        username = form['username']
-        job_name = 'aws_infrastructure'
-
-        db_config = {
-            'host': '4.157.122.28',
-            'port': 3306,
-            'user': 'root',
-            'password': 'cockpitpro',
-            'database': 'jobinfo'
-        }
-
-        connection = mysql.connector.connect(**db_config)
-        cursor = connection.cursor()
-
-        # Fetch job IDs for username 'jini' and job_name 'azure_infrastructure'
-        query = f"SELECT job_id FROM users WHERE username = '{username}' AND job_name = '{job_name}'"
-        cursor.execute(query)
-        job_ids = [result[0] for result in cursor.fetchall()]
-
-        # Close the database connection
-        cursor.close()
-        connection.close()
-
-        return jsonify({"username": username, "job_ids": job_ids}), 200
-
-
-@app.route('/logs-aws', methods=['GET', 'POST'])
-def logs_aws():
+       
+@app.route('/cluster-details-azure', methods=['GET', 'POST'])
+def cluster_details_azure():
     if current_user.is_authenticated:
         username = current_user.username
-        job_id = request.form.get('job-id')
-        access_token = 'glpat-PygP9prTXpfPbJT2ie4w'
-        job_url = f'https://gitlab.com/api/v4/projects/51819357/jobs/{job_id}'
-        headers = {'PRIVATE-TOKEN': access_token}
-
-        response = requests.get(job_url, headers=headers)
-
-        for job in response.json():
-            log_url = f'https://gitlab.com/api/v4/projects/51819357/jobs/{job_id}/trace'
-
-            log_response = requests.get(log_url, headers=headers)
-
-            log_data = log_response.text
-
-
-        ansi_escape = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
-
-        clean_logs = ansi_escape.sub('', log_data)
-
-
-        return render_template('logs-aws.html', username=username, logs=clean_logs)
+        return render_template('cluster-details-azure.html', username=username)
     else:
         return redirect(url_for('login'))
 
-
-@app.route('/json-logs-aws', methods=['POST'])
-def json_logs_aws():
-        form = request.get_json()
-        username = form['username']
-        job_id = form['job_id']
-        access_token = 'glpat-PygP9prTXpfPbJT2ie4w'
-        job_url = f'https://gitlab.com/api/v4/projects/51819357/jobs/{job_id}'
-        headers = {'PRIVATE-TOKEN': access_token}
-
-        response = requests.get(job_url, headers=headers)
-
-    #    if response.status_code == 200:
-            # Assuming response.json() returns a dictionary
-        job_info = response.json()
-
-        log_url = f'https://gitlab.com/api/v4/projects/51819357/jobs/{job_id}/trace'
-        log_response = requests.get(log_url, headers=headers)
-
-      #  if log_response.status_code == 200:
-        log_data = log_response.text
-
-        ansi_escape = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
-        clean_logs = ansi_escape.sub('', log_data)
-
-               # Return a JSON response
-        return jsonify({"username": username, "logs": clean_logs}), 200
-     #   else:
-    #         return jsonify({"error_message": "Failed to retrieve log data."}), 500
-       # else:
-        #    return jsonify({"error_message": "Failed to retrieve job information."}), 500
-
-
-
-@app.route('/logs-azure', methods=['GET', 'POST'])
-def logs_azure():
+@app.route('/cluster-details-gcp', methods=['GET', 'POST'])
+def cluster_details_gcp():
     if current_user.is_authenticated:
         username = current_user.username
-        job_id = request.form.get('job-id')
-        access_token = 'glpat-PygP9prTXpfPbJT2ie4w'
-        job_url = f'https://gitlab.com/api/v4/projects/51819357/jobs/{job_id}'
-        headers = {'PRIVATE-TOKEN': access_token}
-
-        response = requests.get(job_url, headers=headers)
-
-        for job in response.json():
-#    if isinstance(job, dict) and 'id' in job:
-
-            
-
-            log_url = f'https://gitlab.com/api/v4/projects/51819357/jobs/{job_id}/trace'
-
-            log_response = requests.get(log_url, headers=headers)
-
-            log_data = log_response.text
-
-# with open('job_logs.txt', 'w') as log_file:
-
-        # log_file.write(log_data + '\n')
-
-        ansi_escape = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
-
-        
-
-        # Remove ANSI escape codes
-
-        clean_logs = ansi_escape.sub('', log_data)
-
-
-        return render_template('logs-azure.html', username=username, logs=clean_logs)
-    else:
-        return redirect(url_for('login'))
-
-@app.route('/json-logs-azure', methods=['GET', 'POST'])
-def json_logs_azure():
-        form = request.get_json()
-        username = form['username']
-        job_id = form['job_id']
-        access_token = 'glpat-PygP9prTXpfPbJT2ie4w'
-        job_url = f'https://gitlab.com/api/v4/projects/51819357/jobs/{job_id}'
-        headers = {'PRIVATE-TOKEN': access_token}
-
-        response = requests.get(job_url, headers=headers)
-
- #       if response.status_code == 200:
-            # Assuming response.json() returns a dictionary
-        job_info = response.json()
-        log_url = f'https://gitlab.com/api/v4/projects/51819357/jobs/{job_id}/trace'
-        log_response = requests.get(log_url, headers=headers)
-
-  #      if log_response.status_code == 200:
-        log_data = log_response.text
-        ansi_escape = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
-        clean_logs = ansi_escape.sub('', log_data)
-
-                # Return a JSON response with job_id included
-        return jsonify({"username": username, "job_id": job_id, "logs": clean_logs}),200
-
-
-@app.route('/logs-gcp', methods=['GET', 'POST'])
-def logs_gcp():
-    if current_user.is_authenticated:
-        username = current_user.username
-        job_id = request.form.get('job-id')
-        access_token = 'glpat-PygP9prTXpfPbJT2ie4w'
-        job_url = f'https://gitlab.com/api/v4/projects/51819357/jobs/{job_id}'
-        headers = {'PRIVATE-TOKEN': access_token}
-
-        response = requests.get(job_url, headers=headers)
-
-        for job in response.json():
-#    if isinstance(job, dict) and 'id' in job:
-
-            
-
-            log_url = f'https://gitlab.com/api/v4/projects/51819357/jobs/{job_id}/trace'
-
-            log_response = requests.get(log_url, headers=headers)
-
-            log_data = log_response.text
-
-# with open('job_logs.txt', 'w') as log_file:
-
-        # log_file.write(log_data + '\n')
-
-        ansi_escape = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
-
-        
-
-        # Remove ANSI escape codes
-
-        clean_logs = ansi_escape.sub('', log_data)
-
-
-        return render_template('logs-gcp.html', username=username, logs=clean_logs)
-    else:
-        return redirect(url_for('login'))
-
-@app.route('/json-logs-gcp', methods=[ 'POST'])
-def json_logs_gcp():
-        form = request.get_json()
-        username = form['username']
-        job_id = form['job_id']
-        access_token = 'glpat-PygP9prTXpfPbJT2ie4w'
-        job_url = f'https://gitlab.com/api/v4/projects/51819357/jobs/{job_id}'
-        headers = {'PRIVATE-TOKEN': access_token}
-
-        response = requests.get(job_url, headers=headers)
-
-#        if response.status_code == 200:
-            # Assuming response.json() returns a dictionary
-        job_info = response.json()
-
-        log_url = f'https://gitlab.com/api/v4/projects/51819357/jobs/{job_id}/trace'
-        log_response = requests.get(log_url, headers=headers)
-
-#            if log_response.status_code == 200:
-        log_data = log_response.text
-
-        ansi_escape = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
-        clean_logs = ansi_escape.sub('', log_data)
-              # Return a JSON response with job_id included
-        return jsonify({"username": username, "job_id": job_id, "logs": clean_logs})
-
-
-@app.route('/creation-status-azure', methods=['GET', 'POST'])
-def creation_status_azure():
-    if current_user.is_authenticated:
-        username = current_user.username
-        job_name = 'azure_infrastructure'
-
-        db_config = {
-            'host': '4.157.122.28',
-            'port': 3306,
-            'user': 'root',
-            'password': 'cockpitpro',
-            'database': 'jobinfo'
-        }
-
-        connection = mysql.connector.connect(**db_config)
-        cursor = connection.cursor()
-
-        # Fetch job IDs for username 'jini' and job_name 'azure_infrastructure'
-        query = f"SELECT job_id FROM users WHERE username = '{username}' AND job_name = '{job_name}'"
-        cursor.execute(query)
-        job_ids = [result[0] for result in cursor.fetchall()]
-
-        # Close the database connection
-        cursor.close()
-        connection.close()
-
-        return render_template('cluster-details-azure.html', username=username, job_ids=job_ids)
-    else:
-        return redirect(url_for('login'))
-
-@app.route('/json-creation-status-azure', methods=['POST'])
-def json_creation_status_azure():
-        form = request.get_json()
-        username = form['username']
-        job_name = 'azure_infrastructure'
-
-        db_config = {
-            'host': '4.157.122.28',
-            'port': 3306,
-            'user': 'root',
-            'password': 'cockpitpro',
-            'database': 'jobinfo'
-        }
-
-        connection = mysql.connector.connect(**db_config)
-        cursor = connection.cursor()
-
-        # Fetch job IDs for username 'jini' and job_name 'azure_infrastructure'
-        query = f"SELECT job_id FROM users WHERE username = '{username}' AND job_name = '{job_name}'"
-        cursor.execute(query)
-        job_ids = [result[0] for result in cursor.fetchall()]
-
-        # Close the database connection
-        cursor.close()
-        connection.close()
-
-        return jsonify({"username": username, "job_ids": job_ids}), 200
-
-
-
-@app.route('/creation-status-gcp', methods=['GET', 'POST'])
-def creation_status_gcp():
-    if current_user.is_authenticated:
-        username = current_user.username
-        job_name = 'gcp_infrastructure'
-
-        db_config = {
-            'host': '4.157.122.28',
-            'port': 3306,
-            'user': 'root',
-            'password': 'cockpitpro',
-            'database': 'jobinfo'
-        }
-
-        connection = mysql.connector.connect(**db_config)
-        cursor = connection.cursor()
-
-        # Fetch job IDs for username 'jini' and job_name 'azure_infrastructure'
-        query = f"SELECT job_id FROM users WHERE username = '{username}' AND job_name = '{job_name}'"
-        cursor.execute(query)
-        job_ids = [result[0] for result in cursor.fetchall()]
-
-        # Close the database connection
-        cursor.close()
-        connection.close()
-
-        return render_template('cluster-details-gcp.html', username=username, job_ids=job_ids)
+        return render_template('cluster-details-gcp.html', username=username)
     else:
         return redirect(url_for('login'))
 
 
 
-@app.route('/json-creation-status-gcp', methods=['POST'])
-def json_creation_status_gcp():
-        form = request.get_json()
-        username = form['username']
-        job_name = 'gcp_infrastructure'
-
-        db_config = {
-            'host': '4.157.122.28',
-            'port': 3306,
-            'user': 'root',
-            'password': 'cockpitpro',
-            'database': 'jobinfo'
-        }
-
-        connection = mysql.connector.connect(**db_config)
-        cursor = connection.cursor()
-
-        # Fetch job IDs for username 'jini' and job_name 'gcp_infrastructure'
-        query = f"SELECT job_id FROM users WHERE username = '{username}' AND job_name = '{job_name}'"
-        cursor.execute(query)
-        job_ids = [result[0] for result in cursor.fetchall()]
-
-        # Close the database connection
-        cursor.close()
-        connection.close()
-
-        return jsonify({"username": username, "job_ids": job_ids})
-
-
+ 
 @app.route('/cloud')
 def cloud():
     return render_template('cloud.html')
@@ -1345,25 +994,32 @@ def delete_aks():
 
 @app.route('/json_delete_aks', methods=['POST'])
 def json_delete_aks():
-    form = request.get_json()
-    aks_name = form['aks_name']
-    resource_group = form['resource_group']
+    try:
+        aks_name = request.form.get('aks_name')
+        resource_group = request.form.get('resource_group')
 
-    file_path = 'azure-delete/file.txt'
-    tf_config = f''' 
-    aks_name = "{aks_name}"
-    resource_group = "{resource_group}"
-    '''
+        with open('file.txt', 'w') as f:
+            f.write(f'aks_name = "{aks_name}"\n')
+            f.write(f'resource_group = "{resource_group}"\n')
 
-    print("Configuration:", tf_config)
-    print("Uploading tf file to GitLab")
-    
+        file_path = f'azure-delete/file.txt'
+        tf_config = f''' 
+        aks_name = "{aks_name}"
+        resource_group = "{resource_group}"
+        '''
+        print("Configuration:", tf_config)
+        print("Uploading tf file to gitlab")
+        upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
+        print("Tf File uploaded successfully")
 
-    upload_file_to_gitlab(file_path, tf_config, project_id, access_token, gitlab_url, branch_name)
-    print("Tf File uploaded successfully")
-    response_data = {'status': 'success', 'message': 'Delete request triggered the pipeline, please wait some time...'}
-    return jsonify(response_data), 200
-    
+        response_data = {'status': 'success', 'message': 'Delete request triggered the pipeline, please wait some time...'}
+        return jsonify(response_data), 202
+
+    except Exception as e:
+        error_message = f"An error occurred: {str(e)}"
+        response_data = {'status': 'error', 'message': error_message}
+        return jsonify(response_data), 404
+
 @app.route('/delete_gke', methods=['POST'])
 def delete_gke():
     gke_name = request.form.get('gke_name')
@@ -1837,7 +1493,7 @@ def json_submit_form_azure():
             print(f"Azure Key Vault '{key_vault_name}' already exists or encountered an error during creation in Resource Group '{resource_group_name}'.")
             return json.dumps({
                 "message" : "Azure Key Vault '{}' already exists or encountered an error during creation in Resource Group '{}'".format(key_vault_name, resource_group_name)
-            }),409
+            }),200
  
         
         # Store secrets in Azure Key Vault
@@ -2597,7 +2253,7 @@ def JsonLogin():
             db.session.commit()
 
             return jsonify({
-                "message": 'Login successful.',
+                "message": 'Login successfully.',
                 "statusCode": 200,
                 "username": username
             })
@@ -2617,10 +2273,9 @@ def JsonLogin():
 @app.route("/logout")
 def logout():
     logout_user()
+  
     flash('Logout successful.', 'success')
     return redirect(url_for('home'))
- 
- 
  
  
 @app.route("/account")

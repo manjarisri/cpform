@@ -1,0 +1,21 @@
+ * Serving Flask app 'app'
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:4000
+ * Running on http://172.31.43.236:4000
+Press CTRL+C to quit
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 116-922-375
+182.69.178.222 - - [18/Dec/2023 07:44:33] "OPTIONS /json-my-cluster-details-aws HTTP/1.1" 200 -
+182.69.178.222 - - [18/Dec/2023 07:44:36] "POST /json-my-cluster-details-aws HTTP/1.1" 200 -
+/home/ubuntu/ui/SignUp-mysql/app.py:138: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+  return User.query.get(int(user_id))
+157.119.82.163 - - [18/Dec/2023 07:45:00] "GET /cluster-creation-status HTTP/1.1" 200 -
+157.119.82.163 - - [18/Dec/2023 07:45:00] "GET /static/final-dashboard.css HTTP/1.1" 304 -
+157.119.82.163 - - [18/Dec/2023 07:45:04] "GET /creation-status-aws HTTP/1.1" 200 -
+157.119.82.163 - - [18/Dec/2023 07:45:04] "GET /static/final-dashboard.css HTTP/1.1" 304 -
+157.119.82.163 - - [18/Dec/2023 07:45:34] "POST /logs-aws HTTP/1.1" 200 -
+157.119.82.163 - - [18/Dec/2023 07:45:34] "GET /static/final-dashboard.css HTTP/1.1" 304 -
+103.86.174.80 - - [18/Dec/2023 08:01:21] "POST /json-logs-gcp HTTP/1.1" 200 -
